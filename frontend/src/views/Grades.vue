@@ -1,25 +1,20 @@
 <template>
-  <div class="px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-900">Оценки</h1>
-      <button
-        v-if="authStore.userRole !== 'student'"
-        @click="showAddModal = true"
-        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-      >
+  <div class="space-y-6 animate-fade-in">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h2 class="page-title">Оценки</h2>
+        <p class="page-subtitle">Журнал успеваемости с фильтрацией и управлением</p>
+      </div>
+      <BaseButton v-if="authStore.userRole !== 'student'" variant="primary" @click="showAddModal = true">
         Добавить оценку
-      </button>
+      </BaseButton>
     </div>
 
-    <!-- Фильтры для преподавателя и куратора -->
-    <div v-if="authStore.userRole !== 'student'" class="bg-white shadow rounded-lg p-4 mb-6">
+    <BaseCard v-if="authStore.userRole !== 'student'" class="!p-4">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Группа</label>
-          <select
-            v-model="filters.group_id"
-            @change="loadGrades"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md"
+          <label class="label">Группа</label>
+          <select v-model="filters.group_id" @change="onGroupChange" class="input">
           >
             <option value="">Все группы</option>
             <option v-for="group in groups" :key="group.id" :value="group.id">
@@ -28,11 +23,8 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Дисциплина</label>
-          <select
-            v-model="filters.subject_id"
-            @change="loadGrades"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md"
+          <label class="label">Дисциплина</label>
+          <select v-model="filters.subject_id" @change="loadGrades" class="input">
           >
             <option value="">Все дисциплины</option>
             <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
@@ -41,11 +33,8 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Студент</label>
-          <select
-            v-model="filters.student_id"
-            @change="loadGrades"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md"
+          <label class="label">Студент</label>
+          <select v-model="filters.student_id" @change="loadGrades" class="input">
           >
             <option value="">Все студенты</option>
             <option v-for="student in students" :key="student.id" :value="student.id">
@@ -54,126 +43,65 @@
           </select>
         </div>
       </div>
-    </div>
+    </BaseCard>
 
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <div v-if="loading" class="p-6 text-center text-gray-500">Загрузка...</div>
-      <div v-else-if="grades.length === 0" class="p-6 text-center text-gray-500">
-        Оценки не найдены
-      </div>
-      <table v-else class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <BaseCard class="!p-0 overflow-hidden">
+      <div v-if="loading" class="p-12 text-center text-slate-400">Загрузка...</div>
+      <div v-else-if="grades.length === 0" class="p-12 text-center text-slate-400">Оценки не найдены</div>
+      <div v-else class="overflow-x-auto">
+      <table class="min-w-full">
+        <thead class="bg-slate-50/80 dark:bg-slate-800/50">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Дисциплина
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Студент
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Оценка
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Тип работы
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Дата
-            </th>
-            <th v-if="authStore.userRole !== 'student'" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Действия
-            </th>
+            <th class="table-header">Дисциплина</th>
+            <th class="table-header">Студент</th>
+            <th class="table-header">Оценка</th>
+            <th class="table-header">Тип работы</th>
+            <th class="table-header">Дата</th>
+            <th v-if="authStore.userRole !== 'student'" class="table-header">Действия</th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="grade in grades" :key="grade.id">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ grade.subject_name }}
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
+          <tr v-for="grade in grades" :key="grade.id" class="hover:bg-slate-50/80 dark:hover:bg-slate-800/30">
+            <td class="table-cell">{{ grade.subject_name }}</td>
+            <td class="table-cell">{{ grade.student_name }}</td>
+            <td class="table-cell">
+              <BaseBadge :variant="gradeVariant(grade.grade)">{{ grade.grade }}</BaseBadge>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ grade.student_name }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span
-                :class="{
-                  'bg-red-100 text-red-800': grade.grade === 2,
-                  'bg-yellow-100 text-yellow-800': grade.grade === 3,
-                  'bg-blue-100 text-blue-800': grade.grade === 4,
-                  'bg-green-100 text-green-800': grade.grade === 5
-                }"
-                class="px-2 py-1 text-xs font-semibold rounded-full"
-              >
-                {{ grade.grade }}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ grade.work_type }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ formatDate(grade.date) }}
-            </td>
-            <td v-if="authStore.userRole !== 'student'" class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-              <button
-                @click="editGrade(grade)"
-                class="text-blue-600 hover:text-blue-900 mr-3"
-              >
-                Редактировать
-              </button>
-              <button
-                @click="deleteGrade(grade.id)"
-                class="text-red-600 hover:text-red-900"
-              >
-                Удалить
-              </button>
+            <td class="table-cell">{{ grade.work_type }}</td>
+            <td class="table-cell">{{ formatDate(grade.date) }}</td>
+            <td v-if="authStore.userRole !== 'student'" class="table-cell">
+              <div class="flex gap-2">
+                <button type="button" class="text-accent text-sm hover:underline" @click="editGrade(grade)">Изменить</button>
+                <button type="button" class="text-red-500 text-sm hover:underline" @click="deleteGrade(grade.id)">Удалить</button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
+      </div>
+    </BaseCard>
 
-    <!-- Модальное окно добавления/редактирования оценки -->
-    <div
-      v-if="showAddModal || editingGrade"
-      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      @click.self="closeModal"
-    >
-      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <h3 class="text-lg font-bold mb-4">
-          {{ editingGrade ? 'Редактировать оценку' : 'Добавить оценку' }}
-        </h3>
-        <form @submit.prevent="saveGrade" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Студент</label>
-            <select
-              v-model="gradeForm.student_id"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Выберите студента</option>
+    <BaseModal v-model="modalOpen" :title="editingGrade ? 'Редактировать оценку' : 'Добавить оценку'">
+      <form @submit.prevent="saveGrade" class="space-y-4">
+        <div>
+          <label class="label">Студент</label>
+          <select v-model="gradeForm.student_id" required class="input">
+            <option value="">Выберите студента</option>
               <option v-for="student in students" :key="student.id" :value="student.id">
                 {{ student.full_name }}
               </option>
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Дисциплина</label>
-            <select
-              v-model="gradeForm.subject_id"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
+            <label class="label">Дисциплина</label>
+            <select v-model="gradeForm.subject_id" required class="input">
               <option value="">Выберите дисциплину</option>
-              <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
-                {{ subject.name }}
-              </option>
+              <option v-for="subject in subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Оценка</label>
-            <select
-              v-model="gradeForm.grade"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
+            <label class="label">Оценка</label>
+            <select v-model="gradeForm.grade" required class="input">
               <option value="">Выберите оценку</option>
               <option value="5">5 (Отлично)</option>
               <option value="4">4 (Хорошо)</option>
@@ -182,50 +110,33 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Тип работы</label>
-            <input
-              v-model="gradeForm.work_type"
-              type="text"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Например: Лекция, Практика, Экзамен"
-            />
+            <label class="label">Тип работы</label>
+            <input v-model="gradeForm.work_type" type="text" required class="input" placeholder="Лекция, Практика, Экзамен" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Дата</label>
-            <input
-              v-model="gradeForm.date"
-              type="date"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
+            <label class="label">Дата</label>
+            <input v-model="gradeForm.date" type="date" required class="input" />
           </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              @click="closeModal"
-              class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Сохранить
-            </button>
+          <div class="flex justify-end gap-3 pt-2">
+            <BaseButton variant="secondary" @click="closeModal">Отмена</BaseButton>
+            <BaseButton type="submit" variant="primary">Сохранить</BaseButton>
           </div>
         </form>
-      </div>
-    </div>
+    </BaseModal>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import BaseCard from '@/components/ui/BaseCard.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
+import BaseModal from '@/components/ui/BaseModal.vue'
+import BaseBadge from '@/components/ui/BaseBadge.vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 
+const route = useRoute()
 const authStore = useAuthStore()
 
 const loading = ref(true)
@@ -236,6 +147,20 @@ const students = ref([])
 
 const showAddModal = ref(false)
 const editingGrade = ref(null)
+
+const modalOpen = computed({
+  get: () => showAddModal.value || !!editingGrade.value,
+  set: (v) => { if (!v) closeModal() },
+})
+
+function gradeVariant(grade) {
+  return { 2: 'danger', 3: 'warning', 4: 'info', 5: 'success' }[grade] || 'default'
+}
+
+async function onGroupChange() {
+  await loadStudents()
+  await loadGrades()
+}
 
 const filters = ref({
   group_id: '',
@@ -359,6 +284,9 @@ function closeModal() {
 }
 
 onMounted(async () => {
+  if (route.query.student_id) {
+    filters.value.student_id = route.query.student_id
+  }
   await Promise.all([loadGrades(), loadGroups(), loadSubjects()])
   if (authStore.userRole !== 'student') {
     await loadStudents()

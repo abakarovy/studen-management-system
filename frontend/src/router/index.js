@@ -6,7 +6,7 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: () => import('@/views/Login.vue'),
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/',
@@ -16,53 +16,77 @@ const routes = [
       {
         path: '',
         name: 'Dashboard',
-        component: () => import('@/views/Dashboard.vue')
+        component: () => import('@/views/Dashboard.vue'),
       },
       {
-        path: 'profile',
-        name: 'Profile',
-        component: () => import('@/views/Profile.vue')
+        path: 'students',
+        name: 'Students',
+        component: () => import('@/views/Students.vue'),
+        meta: { denyRole: 'student' },
+      },
+      {
+        path: 'attendance',
+        name: 'Attendance',
+        component: () => import('@/views/Attendance.vue'),
+        meta: { denyRole: 'student' },
       },
       {
         path: 'grades',
         name: 'Grades',
-        component: () => import('@/views/Grades.vue')
+        component: () => import('@/views/Grades.vue'),
+      },
+      {
+        path: 'schedule',
+        name: 'Schedule',
+        component: () => import('@/views/Schedule.vue'),
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('@/views/Settings.vue'),
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/Profile.vue'),
       },
       {
         path: 'users',
         name: 'Users',
         component: () => import('@/views/Users.vue'),
-        meta: { requiresRole: 'curator' }
+        meta: { requiresRole: 'curator' },
       },
       {
         path: 'groups',
         name: 'Groups',
         component: () => import('@/views/Groups.vue'),
-        meta: { requiresRole: 'curator' }
+        meta: { requiresRole: 'curator' },
       },
       {
         path: 'subjects',
         name: 'Subjects',
         component: () => import('@/views/Subjects.vue'),
-        meta: { requiresRole: 'curator' }
-      }
-    ]
-  }
+        meta: { requiresRole: 'curator' },
+      },
+    ],
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
 })
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'Login' })
   } else if (to.meta.requiresAuth === false && authStore.isAuthenticated) {
     next({ name: 'Dashboard' })
   } else if (to.meta.requiresRole && authStore.user?.role !== to.meta.requiresRole) {
+    next({ name: 'Dashboard' })
+  } else if (to.meta.denyRole && authStore.user?.role === to.meta.denyRole) {
     next({ name: 'Dashboard' })
   } else {
     next()
@@ -70,4 +94,3 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
-

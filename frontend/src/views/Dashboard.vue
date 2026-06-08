@@ -1,166 +1,179 @@
 <template>
-  <div class="px-4 py-6">
-    <h1 class="text-3xl font-bold text-gray-900 mb-6">Главная страница</h1>
-
-    <div v-if="authStore.userRole === 'student'" class="space-y-6">
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Мой профиль</h2>
-        <div class="space-y-2">
-          <p><span class="font-medium">ФИО:</span> {{ authStore.user?.full_name }}</p>
-          <p><span class="font-medium">Email:</span> {{ authStore.user?.email }}</p>
-          <p><span class="font-medium">Группа:</span> {{ authStore.user?.group_name || 'Не назначена' }}</p>
-          <p><span class="font-medium">Роль:</span> Студент</p>
-        </div>
+  <div class="space-y-6 animate-fade-in">
+    <!-- Student dashboard -->
+    <template v-if="authStore.userRole === 'student'">
+      <div>
+        <h2 class="page-title">Добро пожаловать, {{ firstName }}!</h2>
+        <p class="page-subtitle">Ваша успеваемость и расписание на семестр</p>
       </div>
 
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Статистика успеваемости</h2>
-        <div v-if="stats.loading" class="text-gray-500">Загрузка...</div>
-        <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-blue-50 p-4 rounded-lg">
-            <p class="text-sm text-gray-600">Всего оценок</p>
-            <p class="text-2xl font-bold text-blue-600">{{ stats.totalGrades }}</p>
-          </div>
-          <div class="bg-green-50 p-4 rounded-lg">
-            <p class="text-sm text-gray-600">Средний балл</p>
-            <p class="text-2xl font-bold text-green-600">{{ stats.averageGrade.toFixed(2) }}</p>
-          </div>
-          <div class="bg-purple-50 p-4 rounded-lg">
-            <p class="text-sm text-gray-600">Отличных оценок</p>
-            <p class="text-2xl font-bold text-purple-600">{{ stats.excellentGrades }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-else-if="authStore.userRole === 'teacher'" class="space-y-6">
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Мои группы</h2>
-        <div v-if="groups.loading" class="text-gray-500">Загрузка...</div>
-        <div v-else-if="groups.data.length === 0" class="text-gray-500">Группы не найдены</div>
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div
-            v-for="group in groups.data"
-            :key="group.id"
-            class="border rounded-lg p-4 hover:shadow-md transition-shadow"
-          >
-            <h3 class="font-semibold text-lg">{{ group.name }}</h3>
-            <p class="text-sm text-gray-600">Студентов: {{ group.student_count }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Мои дисциплины</h2>
-        <div v-if="subjects.loading" class="text-gray-500">Загрузка...</div>
-        <div v-else-if="subjects.data.length === 0" class="text-gray-500">Дисциплины не найдены</div>
-        <div v-else class="space-y-2">
-          <div
-            v-for="subject in subjects.data"
-            :key="subject.id"
-            class="border rounded-lg p-3"
-          >
-            <p class="font-medium">{{ subject.name }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-else-if="authStore.userRole === 'curator'" class="space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white shadow rounded-lg p-6">
-          <h3 class="text-lg font-semibold mb-2">Всего пользователей</h3>
-          <p class="text-3xl font-bold text-blue-600">{{ stats.totalUsers }}</p>
-        </div>
-        <div class="bg-white shadow rounded-lg p-6">
-          <h3 class="text-lg font-semibold mb-2">Всего групп</h3>
-          <p class="text-3xl font-bold text-green-600">{{ stats.totalGroups }}</p>
-        </div>
-        <div class="bg-white shadow rounded-lg p-6">
-          <h3 class="text-lg font-semibold mb-2">Всего дисциплин</h3>
-          <p class="text-3xl font-bold text-purple-600">{{ stats.totalSubjects }}</p>
-        </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <MetricCard
+          title="Всего оценок"
+          :value="grades.length"
+          :icon="BookOpen"
+          icon-bg="bg-indigo-100 dark:bg-indigo-900/40"
+          icon-color="text-indigo-600 dark:text-indigo-400"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Средний балл"
+          :value="averageGrade.toFixed(2)"
+          :icon="TrendingUp"
+          icon-bg="bg-emerald-100 dark:bg-emerald-900/40"
+          icon-color="text-emerald-600 dark:text-emerald-400"
+          :trend="2.1"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Отличных оценок"
+          :value="excellentCount"
+          :icon="Award"
+          icon-bg="bg-violet-100 dark:bg-violet-900/40"
+          icon-color="text-violet-600 dark:text-violet-400"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Группа"
+          :value="authStore.user?.group_name || '—'"
+          :icon="Users"
+          icon-bg="bg-sky-100 dark:bg-sky-900/40"
+          icon-color="text-sky-600 dark:text-sky-400"
+          :loading="loading"
+        />
       </div>
 
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Быстрые действия</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <router-link
-            :to="{ name: 'Users' }"
-            class="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-          >
-            <h3 class="font-semibold">Управление пользователями</h3>
-            <p class="text-sm text-gray-600">Добавление и редактирование пользователей</p>
-          </router-link>
-          <router-link
-            :to="{ name: 'Groups' }"
-            class="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-          >
-            <h3 class="font-semibold">Управление группами</h3>
-            <p class="text-sm text-gray-600">Создание и редактирование групп</p>
-          </router-link>
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="xl:col-span-2">
+          <PerformanceChart :chart-data="chartData" :loading="loading" />
         </div>
+        <ActivityFeed :activities="activities" :loading="activitiesLoading" />
       </div>
-    </div>
+    </template>
+
+    <!-- Teacher / Curator dashboard -->
+    <template v-else>
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <h2 class="page-title">Панель управления группой</h2>
+          <p class="page-subtitle">Обзор успеваемости, посещаемости и ключевых метрик</p>
+        </div>
+        <QuickActions />
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <MetricCard
+          title="Всего студентов"
+          :value="students.length"
+          :icon="Users"
+          icon-bg="bg-indigo-100 dark:bg-indigo-900/40"
+          icon-color="text-indigo-600 dark:text-indigo-400"
+          :trend="3.2"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Посещаемость"
+          :value="`${attendanceRate.value}%`"
+          :icon="ClipboardCheck"
+          icon-bg="bg-emerald-100 dark:bg-emerald-900/40"
+          icon-color="text-emerald-600 dark:text-emerald-400"
+          :trend="attendanceRate.trend"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Средний балл"
+          :value="averageGrade.toFixed(2)"
+          :icon="BarChart3"
+          icon-bg="bg-violet-100 dark:bg-violet-900/40"
+          icon-color="text-violet-600 dark:text-violet-400"
+          :trend="averageGrade >= 4 ? 1.5 : -0.8"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Под риском"
+          :value="studentsAtRisk"
+          subtitle="Требуют внимания"
+          :icon="AlertTriangle"
+          icon-bg="bg-red-100 dark:bg-red-900/40"
+          icon-color="text-red-600 dark:text-red-400"
+          :trend="-2.1"
+          :loading="loading"
+        />
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="xl:col-span-2 space-y-6">
+          <PerformanceChart :chart-data="chartData" :loading="loading" />
+          <StudentTable
+            :students="students"
+            :loading="loading"
+            :get-student-status="getStudentStatus"
+            :get-student-average="getStudentAverage"
+            :show-actions="authStore.userRole === 'curator'"
+            title="Студенты — быстрый обзор"
+            :page-size="5"
+            @edit="handleEditStudent"
+          />
+        </div>
+        <ActivityFeed :activities="activities" :loading="activitiesLoading" />
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import {
+  Users,
+  BookOpen,
+  TrendingUp,
+  Award,
+  ClipboardCheck,
+  BarChart3,
+  AlertTriangle,
+} from 'lucide-vue-next'
+import MetricCard from '@/components/dashboard/MetricCard.vue'
+import PerformanceChart from '@/components/dashboard/PerformanceChart.vue'
+import StudentTable from '@/components/dashboard/StudentTable.vue'
+import QuickActions from '@/components/dashboard/QuickActions.vue'
+import ActivityFeed from '@/components/layout/ActivityFeed.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useAnalytics } from '@/composables/useAnalytics'
+import { useActivities } from '@/composables/useActivities'
 import api from '@/services/api'
 
 const authStore = useAuthStore()
+const {
+  loading,
+  students,
+  grades,
+  averageGrade,
+  studentsAtRisk,
+  attendanceRate,
+  chartData,
+  getStudentStatus,
+  getStudentAverage,
+  load,
+} = useAnalytics()
 
-const stats = ref({
-  loading: true,
-  totalGrades: 0,
-  averageGrade: 0,
-  excellentGrades: 0,
-  totalUsers: 0,
-  totalGroups: 0,
-  totalSubjects: 0
-})
+const { activities, load: loadActivities } = useActivities()
+const activitiesLoading = ref(true)
 
-const groups = ref({ loading: true, data: [] })
-const subjects = ref({ loading: true, data: [] })
+const firstName = computed(() => authStore.user?.full_name?.split(' ')[1] || authStore.user?.full_name?.split(' ')[0] || '')
+const excellentCount = computed(() => grades.value.filter((g) => g.grade === 5).length)
 
-async function loadData() {
+async function handleEditStudent(student) {
   try {
-    if (authStore.userRole === 'student') {
-      const gradesResponse = await api.get('/grades')
-      const grades = gradesResponse.data
-      
-      stats.value.totalGrades = grades.length
-      if (grades.length > 0) {
-        const sum = grades.reduce((acc, g) => acc + g.grade, 0)
-        stats.value.averageGrade = sum / grades.length
-        stats.value.excellentGrades = grades.filter(g => g.grade === 5).length
-      }
-      stats.value.loading = false
-    } else if (authStore.userRole === 'teacher') {
-      const [groupsResponse, subjectsResponse] = await Promise.all([
-        api.get('/groups'),
-        api.get('/subjects')
-      ])
-      groups.value = { loading: false, data: groupsResponse.data }
-      subjects.value = { loading: false, data: subjectsResponse.data }
-    } else if (authStore.userRole === 'curator') {
-      const [usersResponse, groupsResponse, subjectsResponse] = await Promise.all([
-        api.get('/users'),
-        api.get('/groups'),
-        api.get('/subjects')
-      ])
-      stats.value.totalUsers = usersResponse.data.length
-      stats.value.totalGroups = groupsResponse.data.length
-      stats.value.totalSubjects = subjectsResponse.data.length
-      stats.value.loading = false
-    }
-  } catch (error) {
-    console.error('Ошибка загрузки данных:', error)
+    await api.put(`/users/${student.id}`, { full_name: student.full_name })
+    await load()
+  } catch (e) {
+    alert(e.response?.data?.error || 'Ошибка сохранения')
   }
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await load()
+  await loadActivities()
+  activitiesLoading.value = false
+})
 </script>
-

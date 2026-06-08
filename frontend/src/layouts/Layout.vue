@@ -1,89 +1,70 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <nav class="bg-white shadow-sm">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex">
-            <div class="flex-shrink-0 flex items-center">
-              <h1 class="text-xl font-bold text-gray-900">Система учета студентов</h1>
-            </div>
-            <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <router-link
-                :to="{ name: 'Dashboard' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Главная
-              </router-link>
-              <router-link
-                :to="{ name: 'Profile' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Профиль
-              </router-link>
-              <router-link
-                :to="{ name: 'Grades' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Оценки
-              </router-link>
-              <router-link
-                v-if="authStore.userRole === 'curator'"
-                :to="{ name: 'Users' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Пользователи
-              </router-link>
-              <router-link
-                v-if="authStore.userRole === 'curator'"
-                :to="{ name: 'Groups' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Группы
-              </router-link>
-              <router-link
-                v-if="authStore.userRole === 'curator'"
-                :to="{ name: 'Subjects' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Дисциплины
-              </router-link>
-            </div>
-          </div>
-          <div class="flex items-center">
-            <span class="text-sm text-gray-700 mr-4">{{ authStore.user?.full_name }}</span>
-            <button
-              @click="handleLogout"
-              class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
-            >
-              Выйти
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
+  <div class="min-h-screen bg-slate-50 dark:bg-surface-dark">
+    <Sidebar
+      :collapsed="sidebarCollapsed"
+      :mobile-open="mobileOpen"
+      @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
+      @close-mobile="mobileOpen = false"
+      @navigate="mobileOpen = false"
+    />
 
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <router-view />
-    </main>
+    <div
+      :class="[
+        'flex min-h-screen flex-col transition-all duration-300',
+        sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-64',
+      ]"
+    >
+      <TopBar
+        :activities="activities"
+        @toggle-mobile="mobileOpen = !mobileOpen"
+        @logout="handleLogout"
+      />
+
+      <main class="flex-1 p-4 sm:p-6 lg:p-8">
+        <router-view v-slot="{ Component }">
+          <Transition name="page" mode="out-in">
+            <component :is="Component" />
+          </Transition>
+        </router-view>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import Sidebar from '@/components/layout/Sidebar.vue'
+import TopBar from '@/components/layout/TopBar.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useActivities } from '@/composables/useActivities'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { activities, load: loadActivities } = useActivities()
+
+const sidebarCollapsed = ref(false)
+const mobileOpen = ref(false)
 
 function handleLogout() {
   authStore.logout()
   router.push({ name: 'Login' })
 }
+
+onMounted(loadActivities)
 </script>
 
+<style scoped>
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>

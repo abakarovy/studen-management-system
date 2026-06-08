@@ -1,97 +1,63 @@
 <template>
-  <div class="px-4 py-6">
-    <h1 class="text-3xl font-bold text-gray-900 mb-6">Мой профиль</h1>
+  <div class="space-y-6 animate-fade-in max-w-2xl">
+    <div>
+      <h2 class="page-title">Мой профиль</h2>
+      <p class="page-subtitle">Управление личными данными и настройками аккаунта</p>
+    </div>
 
-    <div class="bg-white shadow rounded-lg p-6 max-w-2xl">
-      <div v-if="loading" class="text-gray-500">Загрузка...</div>
-      
-      <form v-else @submit.prevent="handleUpdate" class="space-y-4">
+    <BaseCard>
+      <div v-if="loading" class="py-8 text-center text-slate-400">Загрузка...</div>
+
+      <form v-else @submit.prevent="handleUpdate" class="space-y-5">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            ФИО
-          </label>
-          <input
-            v-model="formData.full_name"
-            type="text"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <label class="label">ФИО</label>
+          <input v-model="formData.full_name" type="text" required class="input" />
         </div>
-
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
+          <label class="label">Email</label>
           <input
             v-model="formData.email"
             type="email"
             :disabled="authStore.userRole === 'student'"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            class="input disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
-
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Роль
-          </label>
-          <input
-            :value="getRoleName(formData.role)"
-            type="text"
-            disabled
-            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
-          />
+          <label class="label">Роль</label>
+          <input :value="getRoleName(formData.role)" type="text" disabled class="input opacity-60" />
         </div>
-
         <div v-if="formData.group_name">
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Группа
-          </label>
-          <input
-            :value="formData.group_name"
-            type="text"
-            disabled
-            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
-          />
+          <label class="label">Группа</label>
+          <input :value="formData.group_name" type="text" disabled class="input opacity-60" />
         </div>
-
         <div v-if="authStore.userRole === 'curator'">
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Новый пароль (оставьте пустым, если не хотите менять)
-          </label>
-          <input
-            v-model="formData.password"
-            type="password"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <label class="label">Новый пароль</label>
+          <input v-model="formData.password" type="password" class="input" placeholder="Оставьте пустым, если не меняете" />
         </div>
 
-        <div v-if="error" class="text-red-600 text-sm">
+        <div v-if="error" class="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">
           {{ error }}
         </div>
-
-        <div v-if="success" class="text-green-600 text-sm">
-          Профиль успешно обновлен
+        <div v-if="success" class="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
+          Профиль успешно обновлён
         </div>
 
-        <button
-          type="submit"
-          :disabled="saving"
-          class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
-        >
-          {{ saving ? 'Сохранение...' : 'Сохранить' }}
-        </button>
+        <BaseButton type="submit" variant="primary" :disabled="saving">
+          {{ saving ? 'Сохранение...' : 'Сохранить изменения' }}
+        </BaseButton>
       </form>
-    </div>
+    </BaseCard>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import BaseCard from '@/components/ui/BaseCard.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 
 const authStore = useAuthStore()
-
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
@@ -102,16 +68,11 @@ const formData = ref({
   email: '',
   role: '',
   group_name: '',
-  password: ''
+  password: '',
 })
 
 function getRoleName(role) {
-  const roles = {
-    student: 'Студент',
-    teacher: 'Преподаватель',
-    curator: 'Куратор'
-  }
-  return roles[role] || role
+  return { student: 'Студент', teacher: 'Преподаватель', curator: 'Куратор' }[role] || role
 }
 
 async function loadProfile() {
@@ -122,11 +83,11 @@ async function loadProfile() {
       email: response.data.email,
       role: response.data.role,
       group_name: response.data.group_name || '',
-      password: ''
+      password: '',
     }
-    loading.value = false
-  } catch (err) {
+  } catch {
     error.value = 'Ошибка загрузки профиля'
+  } finally {
     loading.value = false
   }
 }
@@ -135,30 +96,22 @@ async function handleUpdate() {
   saving.value = true
   error.value = ''
   success.value = false
-
   try {
-    const updateData = {
-      full_name: formData.value.full_name
-    }
-
+    const updateData = { full_name: formData.value.full_name }
     if (authStore.userRole === 'curator') {
       updateData.email = formData.value.email
-      if (formData.value.password) {
-        updateData.password = formData.value.password
-      }
+      if (formData.value.password) updateData.password = formData.value.password
     }
-
     await api.put(`/users/${authStore.user.id}`, updateData)
     await authStore.fetchMe()
     success.value = true
     formData.value.password = ''
   } catch (err) {
     error.value = err.response?.data?.error || 'Ошибка обновления профиля'
+  } finally {
+    saving.value = false
   }
-
-  saving.value = false
 }
 
 onMounted(loadProfile)
 </script>
-

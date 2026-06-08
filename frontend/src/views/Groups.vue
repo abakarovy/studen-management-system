@@ -1,20 +1,18 @@
 <template>
-  <div class="px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-900">Группы</h1>
-      <button
-        @click="showAddModal = true"
-        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-      >
-        Добавить группу
-      </button>
+  <div class="space-y-6 animate-fade-in">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h2 class="page-title">Группы</h2>
+        <p class="page-subtitle">Управление учебными группами</p>
+      </div>
+      <BaseButton variant="primary" @click="showAddModal = true">Добавить группу</BaseButton>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
         v-for="group in groups"
         :key="group.id"
-        class="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow"
+        class="card-hover p-6"
       >
         <div class="flex justify-between items-start mb-4">
           <h3 class="text-xl font-semibold">{{ group.name }}</h3>
@@ -47,93 +45,48 @@
       Группы не найдены
     </div>
 
-    <!-- Модальное окно добавления/редактирования группы -->
-    <div
-      v-if="showAddModal || editingGroup"
-      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      @click.self="closeModal"
-    >
-      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <h3 class="text-lg font-bold mb-4">
-          {{ editingGroup ? 'Редактировать группу' : 'Добавить группу' }}
-        </h3>
-        <form @submit.prevent="saveGroup" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Название группы</label>
-            <input
-              v-model="groupForm.name"
-              type="text"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Например: ИТ-21"
-            />
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              @click="closeModal"
-              class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Сохранить
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Модальное окно просмотра студентов группы -->
-    <div
-      v-if="selectedGroup"
-      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      @click.self="selectedGroup = null"
-    >
-      <div class="relative top-20 mx-auto p-5 border w-2/3 max-w-4xl shadow-lg rounded-md bg-white">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-bold">Студенты группы {{ selectedGroup.name }}</h3>
-          <button
-            @click="selectedGroup = null"
-            class="text-gray-500 hover:text-gray-700"
-          >
-            ✕
-          </button>
+    <BaseModal v-model="modalOpen" :title="editingGroup ? 'Редактировать группу' : 'Добавить группу'" size="sm">
+      <form @submit.prevent="saveGroup" class="space-y-4">
+        <div>
+          <label class="label">Название группы</label>
+          <input v-model="groupForm.name" type="text" required class="input" placeholder="Например: ИТ-21" />
         </div>
+        <div class="flex justify-end gap-3">
+          <BaseButton variant="secondary" @click="closeModal">Отмена</BaseButton>
+          <BaseButton type="submit" variant="primary">Сохранить</BaseButton>
+        </div>
+      </form>
+    </BaseModal>
+
+    <BaseModal v-model="studentsModalOpen" :title="`Студенты группы ${selectedGroup?.name || ''}`" size="lg">
         <div v-if="groupStudentsLoading" class="text-center py-8 text-gray-500">
           Загрузка...
         </div>
         <div v-else-if="groupStudents.length === 0" class="text-center py-8 text-gray-500">
           В группе нет студентов
         </div>
-        <table v-else class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+        <table v-else class="min-w-full">
+          <thead class="bg-slate-50 dark:bg-slate-800/50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ФИО</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+              <th class="table-header">ФИО</th>
+              <th class="table-header">Email</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
             <tr v-for="student in groupStudents" :key="student.id">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ student.full_name }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ student.email }}
-              </td>
+              <td class="table-cell">{{ student.full_name }}</td>
+              <td class="table-cell">{{ student.email }}</td>
             </tr>
           </tbody>
         </table>
-      </div>
-    </div>
+    </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
+import BaseModal from '@/components/ui/BaseModal.vue'
 import api from '@/services/api'
 
 const loading = ref(true)
@@ -144,8 +97,16 @@ const selectedGroup = ref(null)
 const groupStudents = ref([])
 const groupStudentsLoading = ref(false)
 
-const groupForm = ref({
-  name: ''
+const studentsModalOpen = computed({
+  get: () => !!selectedGroup.value,
+  set: (v) => { if (!v) selectedGroup.value = null },
+})
+
+const groupForm = ref({ name: '' })
+
+const modalOpen = computed({
+  get: () => showAddModal.value || !!editingGroup.value,
+  set: (v) => { if (!v) closeModal() },
 })
 
 async function loadGroups() {
