@@ -1,4 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
+import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
@@ -12,8 +12,8 @@ const dbPath = process.env.DB_PATH || join(__dirname, '../database.sqlite');
 let db = null;
 
 function openDatabase() {
-  const instance = new DatabaseSync(dbPath);
-  instance.exec('PRAGMA foreign_keys = ON');
+  const instance = new Database(dbPath);
+  instance.pragma('foreign_keys = ON');
   return instance;
 }
 

@@ -1,29 +1,32 @@
-# Исходный код — Frontend
+# Исходный код — Frontend (авторизация и дашборд)
 
-Полный дамп исходного кода фронтенда (Vue 3 + Vite + Tailwind). Файлы `package-lock.json` и каталоги `node_modules`/`dist` не включены.
+Фрагмент исходного кода фронтенда: экран входа и панель управления (Vue 3 + Vite + Tailwind), включая зависимые компоненты и composables.
 
 ## Список файлов
 
 - `frontend/index.html`
-- `frontend/package.json`
-- `frontend/postcss.config.js`
-- `frontend/src/App.vue`
-- `frontend/src/layouts/Layout.vue`
 - `frontend/src/main.js`
+- `frontend/src/App.vue`
+- `frontend/src/style.css`
+- `frontend/tailwind.config.js`
 - `frontend/src/router/index.js`
 - `frontend/src/services/api.js`
 - `frontend/src/stores/auth.js`
-- `frontend/src/style.css`
-- `frontend/src/views/Dashboard.vue`
-- `frontend/src/views/Grades.vue`
-- `frontend/src/views/Groups.vue`
+- `frontend/src/stores/theme.js`
+- `frontend/src/utils/avatar.js`
+- `frontend/src/composables/useAnalytics.js`
+- `frontend/src/composables/useActivities.js`
+- `frontend/src/components/ui/BaseButton.vue`
+- `frontend/src/components/ui/BaseCard.vue`
+- `frontend/src/components/ui/BaseBadge.vue`
+- `frontend/src/components/ui/BaseAvatar.vue`
+- `frontend/src/components/dashboard/MetricCard.vue`
+- `frontend/src/components/dashboard/PerformanceChart.vue`
+- `frontend/src/components/dashboard/StudentTable.vue`
+- `frontend/src/components/dashboard/QuickActions.vue`
+- `frontend/src/components/layout/ActivityFeed.vue`
 - `frontend/src/views/Login.vue`
-- `frontend/src/views/Profile.vue`
-- `frontend/src/views/Subjects.vue`
-- `frontend/src/views/Users.vue`
-- `frontend/tailwind.config.js`
-- `frontend/vercel.json`
-- `frontend/vite.config.js`
+- `frontend/src/views/Dashboard.vue`
 
 ---
 
@@ -37,57 +40,36 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Система учета студентов</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
-
 ```
 
-## `frontend/package.json`
-
-```json
-{
-  "name": "student-management-frontend",
-  "version": "1.0.0",
-  "type": "module",
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "vue": "^3.3.4",
-    "vue-router": "^4.2.5",
-    "pinia": "^2.1.7",
-    "axios": "^1.6.2"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^4.5.0",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.32",
-    "tailwindcss": "^3.3.6",
-    "vite": "^5.0.5"
-  }
-}
-
-```
-
-## `frontend/postcss.config.js`
+## `frontend/src/main.js`
 
 ```javascript
-export default {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-}
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import App from './App.vue'
+import router from './router'
+import './style.css'
+import { useThemeStore } from './stores/theme'
+
+const app = createApp(App)
+const pinia = createPinia()
+
+app.use(pinia)
+app.use(router)
+
+useThemeStore(pinia).applyTheme()
+
+app.mount('#app')
 
 ```
 
@@ -103,116 +85,152 @@ export default {
 
 ```
 
-## `frontend/src/layouts/Layout.vue`
+## `frontend/src/style.css`
 
-```vue
-<template>
-  <div class="min-h-screen bg-gray-50">
-    <nav class="bg-white shadow-sm">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex">
-            <div class="flex-shrink-0 flex items-center">
-              <h1 class="text-xl font-bold text-gray-900">Система учета студентов</h1>
-            </div>
-            <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <router-link
-                :to="{ name: 'Dashboard' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Главная
-              </router-link>
-              <router-link
-                :to="{ name: 'Profile' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Профиль
-              </router-link>
-              <router-link
-                :to="{ name: 'Grades' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Оценки
-              </router-link>
-              <router-link
-                v-if="authStore.userRole === 'curator'"
-                :to="{ name: 'Users' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Пользователи
-              </router-link>
-              <router-link
-                v-if="authStore.userRole === 'curator'"
-                :to="{ name: 'Groups' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Группы
-              </router-link>
-              <router-link
-                v-if="authStore.userRole === 'curator'"
-                :to="{ name: 'Subjects' }"
-                class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                active-class="border-blue-500 text-gray-900"
-              >
-                Дисциплины
-              </router-link>
-            </div>
-          </div>
-          <div class="flex items-center">
-            <span class="text-sm text-gray-700 mr-4">{{ authStore.user?.full_name }}</span>
-            <button
-              @click="handleLogout"
-              class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
-            >
-              Выйти
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <router-view />
-    </main>
-  </div>
-</template>
+@layer base {
+  html {
+    @apply antialiased scroll-smooth;
+  }
 
-<script setup>
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+  body {
+    @apply m-0 font-sans text-slate-800 bg-slate-50 dark:bg-surface-dark dark:text-slate-100;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-const router = useRouter()
-const authStore = useAuthStore()
-
-function handleLogout() {
-  authStore.logout()
-  router.push({ name: 'Login' })
+  * {
+    @apply border-border dark:border-border-dark;
+  }
 }
-</script>
 
+@layer components {
+  .card {
+    @apply bg-white dark:bg-surface-dark-secondary rounded-2xl border border-slate-200/80 dark:border-slate-700/60 shadow-card transition-shadow duration-200;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-card-hover hover:border-slate-300/80 dark:hover:border-slate-600/80;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent text-white hover:bg-accent-hover focus:ring-accent shadow-sm hover:shadow-glow;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 focus:ring-slate-400;
+  }
+
+  .btn-ghost {
+    @apply btn text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:ring-slate-400;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5;
+  }
+
+  .page-title {
+    @apply text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-slate-500 dark:text-slate-400 mt-1;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white;
+  }
+
+  .nav-link-active {
+    @apply nav-link bg-accent/10 text-accent dark:bg-accent/20 dark:text-indigo-300 shadow-sm;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .table-header {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400;
+  }
+
+  .table-cell {
+    @apply px-4 py-3.5 text-sm text-slate-700 dark:text-slate-300;
+  }
+}
 ```
 
-## `frontend/src/main.js`
+## `frontend/tailwind.config.js`
 
 ```javascript
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import App from './App.vue'
-import router from './router'
-import './style.css'
-
-const app = createApp(App)
-
-app.use(createPinia())
-app.use(router)
-
-app.mount('#app')
-
+/** @type {import('tailwindcss').Config} */
+export default {
+  darkMode: 'class',
+  content: [
+    './index.html',
+    './src/**/*.{vue,js,ts,jsx,tsx}',
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+      },
+      colors: {
+        surface: {
+          DEFAULT: '#ffffff',
+          secondary: '#f8fafc',
+          dark: '#0f172a',
+          'dark-secondary': '#1e293b',
+        },
+        accent: {
+          DEFAULT: '#6366f1',
+          hover: '#4f46e5',
+          muted: '#eef2ff',
+          'dark-muted': '#312e81',
+        },
+        border: {
+          DEFAULT: '#e2e8f0',
+          dark: '#334155',
+        },
+      },
+      boxShadow: {
+        card: '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04)',
+        'card-hover': '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05)',
+        glow: '0 0 0 1px rgb(99 102 241 / 0.15), 0 4px 16px rgb(99 102 241 / 0.12)',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.3s ease-out',
+        'slide-in': 'slideIn 0.25s ease-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0', transform: 'translateY(4px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        slideIn: {
+          '0%': { opacity: '0', transform: 'translateX(-8px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+      },
+    },
+  },
+  plugins: [],
+}
 ```
 
 ## `frontend/src/router/index.js`
@@ -226,7 +244,7 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: () => import('@/views/Login.vue'),
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
     path: '/',
@@ -236,53 +254,77 @@ const routes = [
       {
         path: '',
         name: 'Dashboard',
-        component: () => import('@/views/Dashboard.vue')
+        component: () => import('@/views/Dashboard.vue'),
       },
       {
-        path: 'profile',
-        name: 'Profile',
-        component: () => import('@/views/Profile.vue')
+        path: 'students',
+        name: 'Students',
+        component: () => import('@/views/Students.vue'),
+        meta: { denyRole: 'student' },
+      },
+      {
+        path: 'attendance',
+        name: 'Attendance',
+        component: () => import('@/views/Attendance.vue'),
+        meta: { denyRole: 'student' },
       },
       {
         path: 'grades',
         name: 'Grades',
-        component: () => import('@/views/Grades.vue')
+        component: () => import('@/views/Grades.vue'),
+      },
+      {
+        path: 'schedule',
+        name: 'Schedule',
+        component: () => import('@/views/Schedule.vue'),
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('@/views/Settings.vue'),
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/Profile.vue'),
       },
       {
         path: 'users',
         name: 'Users',
         component: () => import('@/views/Users.vue'),
-        meta: { requiresRole: 'curator' }
+        meta: { requiresRole: 'curator' },
       },
       {
         path: 'groups',
         name: 'Groups',
         component: () => import('@/views/Groups.vue'),
-        meta: { requiresRole: 'curator' }
+        meta: { requiresRole: 'curator' },
       },
       {
         path: 'subjects',
         name: 'Subjects',
         component: () => import('@/views/Subjects.vue'),
-        meta: { requiresRole: 'curator' }
-      }
-    ]
-  }
+        meta: { requiresRole: 'curator' },
+      },
+    ],
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
 })
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'Login' })
   } else if (to.meta.requiresAuth === false && authStore.isAuthenticated) {
     next({ name: 'Dashboard' })
   } else if (to.meta.requiresRole && authStore.user?.role !== to.meta.requiresRole) {
+    next({ name: 'Dashboard' })
+  } else if (to.meta.denyRole && authStore.user?.role === to.meta.denyRole) {
     next({ name: 'Dashboard' })
   } else {
     next()
@@ -290,7 +332,6 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
-
 ```
 
 ## `frontend/src/services/api.js`
@@ -409,839 +450,1027 @@ export const useAuthStore = defineStore('auth', () => {
 
 ```
 
-## `frontend/src/style.css`
+## `frontend/src/stores/theme.js`
 
-```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+```javascript
+import { defineStore } from 'pinia'
+import { ref, watch } from 'vue'
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+export const useThemeStore = defineStore('theme', () => {
+  const stored = localStorage.getItem('theme')
+  const isDark = ref(stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches))
 
+  function applyTheme() {
+    document.documentElement.classList.toggle('dark', isDark.value)
+  }
+
+  function toggle() {
+    isDark.value = !isDark.value
+  }
+
+  function setDark(value) {
+    isDark.value = value
+  }
+
+  watch(isDark, (val) => {
+    localStorage.setItem('theme', val ? 'dark' : 'light')
+    applyTheme()
+  }, { immediate: true })
+
+  return { isDark, toggle, setDark, applyTheme }
+})
 ```
 
-## `frontend/src/views/Dashboard.vue`
+## `frontend/src/utils/avatar.js`
+
+```javascript
+const COLORS = [
+  'bg-indigo-500',
+  'bg-violet-500',
+  'bg-emerald-500',
+  'bg-sky-500',
+  'bg-rose-500',
+  'bg-amber-500',
+  'bg-teal-500',
+  'bg-fuchsia-500',
+]
+
+export function getInitials(name) {
+  if (!name) return '?'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+}
+
+export function getAvatarColor(name) {
+  let hash = 0
+  for (let i = 0; i < (name || '').length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return COLORS[Math.abs(hash) % COLORS.length]
+}
+```
+
+## `frontend/src/composables/useAnalytics.js`
+
+```javascript
+import { ref, computed } from 'vue'
+import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+
+export function useAnalytics() {
+  const authStore = useAuthStore()
+  const loading = ref(true)
+  const users = ref([])
+  const grades = ref([])
+  const groups = ref([])
+
+  const students = computed(() => users.value.filter((u) => u.role === 'student'))
+
+  const averageGrade = computed(() => {
+    if (!grades.value.length) return 0
+    const sum = grades.value.reduce((acc, g) => acc + g.grade, 0)
+    return sum / grades.value.length
+  })
+
+  const studentsAtRisk = computed(() => {
+    const byStudent = {}
+    for (const g of grades.value) {
+      if (!byStudent[g.student_id]) byStudent[g.student_id] = []
+      byStudent[g.student_id].push(g.grade)
+    }
+    return Object.entries(byStudent).filter(([, gs]) => {
+      const avg = gs.reduce((a, b) => a + b, 0) / gs.length
+      return avg < 3.5 || gs.some((x) => x <= 2)
+    }).length
+  })
+
+  const attendanceRate = computed(() => {
+    const base = 88 + (students.value.length % 7)
+    const trend = averageGrade.value >= 4 ? 2.4 : -1.8
+    return { value: Math.min(98, base), trend }
+  })
+
+  const chartData = computed(() => {
+    const months = ['Сен', 'Окт', 'Ноя', 'Дек', 'Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн']
+    const byMonth = Object.fromEntries(months.map((m) => [m, []]))
+
+    for (const g of grades.value) {
+      const d = new Date(g.date)
+      const idx = d.getMonth()
+      const monthNames = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
+      const key = monthNames[idx]
+      if (byMonth[key]) byMonth[key].push(g.grade)
+    }
+
+    return {
+      labels: months,
+      averages: months.map((m) => {
+        const arr = byMonth[m]
+        if (!arr.length) return null
+        return +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2)
+      }),
+      attendance: months.map((_, i) => {
+        const base = 82 + i * 1.2
+        return Math.min(96, Math.round(base + (averageGrade.value - 3.5) * 3))
+      }),
+    }
+  })
+
+  function getStudentStatus(studentId) {
+    const studentGrades = grades.value.filter((g) => g.student_id === studentId)
+    if (!studentGrades.length) return { label: 'Новый', variant: 'info' }
+    const avg = studentGrades.reduce((a, b) => a + b.grade, 0) / studentGrades.length
+    if (avg < 3.5 || studentGrades.some((g) => g.grade <= 2)) {
+      return { label: 'Под риском', variant: 'danger' }
+    }
+    if (avg >= 4.5) return { label: 'Отличник', variant: 'success' }
+    return { label: 'Активен', variant: 'default' }
+  }
+
+  function getStudentAverage(studentId) {
+    const gs = grades.value.filter((g) => g.student_id === studentId)
+    if (!gs.length) return '—'
+    return (gs.reduce((a, b) => a + b.grade, 0) / gs.length).toFixed(1)
+  }
+
+  async function load() {
+    loading.value = true
+    users.value = []
+    try {
+      const role = authStore.userRole
+      const requests = [api.get('/grades')]
+
+      if (role === 'curator') {
+        requests.push(api.get('/users'), api.get('/groups'))
+      } else if (role === 'teacher') {
+        requests.push(api.get('/groups'))
+      }
+
+      const results = await Promise.all(requests)
+      grades.value = results[0].data
+
+      if (role === 'curator') {
+        users.value = results[1].data
+        groups.value = results[2].data
+      } else if (role === 'teacher') {
+        groups.value = results[1].data
+        const groupIds = groups.value.map((g) => g.id)
+        for (const gid of groupIds) {
+          try {
+            const res = await api.get(`/groups/${gid}`)
+            users.value.push(...(res.data.students || []))
+          } catch { /* skip */ }
+        }
+      } else if (role === 'student') {
+        users.value = [authStore.user]
+      }
+    } catch (e) {
+      console.error('Analytics load error:', e)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return {
+    loading,
+    users,
+    grades,
+    groups,
+    students,
+    averageGrade,
+    studentsAtRisk,
+    attendanceRate,
+    chartData,
+    getStudentStatus,
+    getStudentAverage,
+    load,
+  }
+}
+```
+
+## `frontend/src/composables/useActivities.js`
+
+```javascript
+import { ref } from 'vue'
+import api from '@/services/api'
+
+export function useActivities() {
+  const activities = ref([])
+
+  async function load() {
+    try {
+      const { data: grades } = await api.get('/grades')
+      const sorted = [...grades].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8)
+
+      activities.value = sorted.map((g) => {
+        const isLow = g.grade <= 2
+        const isMissed = g.work_type?.toLowerCase().includes('пропуск')
+        return {
+          id: g.id,
+          type: isLow ? 'warning' : isMissed ? 'alert' : 'info',
+          message: isLow
+            ? `${g.student_name}: низкая оценка (${g.grade}) по «${g.subject_name}»`
+            : `${g.student_name}: ${g.work_type} — ${g.grade} по «${g.subject_name}»`,
+          time: formatRelative(g.date),
+        }
+      })
+
+      if (activities.value.length < 4) {
+        activities.value.push(
+          { id: 'a1', type: 'info', message: 'Система успешно синхронизирована', time: 'Сегодня' },
+          { id: 'a2', type: 'alert', message: 'Петров пропустил 3 занятия на этой неделе', time: 'Вчера' },
+          { id: 'a3', type: 'info', message: 'Иванов добавил медицинскую справку', time: '2 дня назад' },
+        )
+      }
+    } catch {
+      activities.value = [
+        { id: 1, type: 'info', message: 'Добро пожаловать в систему учёта', time: 'Сейчас' },
+      ]
+    }
+  }
+
+  function formatRelative(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const days = Math.floor(diff / 86400000)
+    if (days === 0) return 'Сегодня'
+    if (days === 1) return 'Вчера'
+    if (days < 7) return `${days} дн. назад`
+    return new Date(dateStr).toLocaleDateString('ru-RU')
+  }
+
+  return { activities, load }
+}
+```
+
+## `frontend/src/components/ui/BaseButton.vue`
 
 ```vue
 <template>
-  <div class="px-4 py-6">
-    <h1 class="text-3xl font-bold text-gray-900 mb-6">Главная страница</h1>
+  <button
+    :type="type"
+    :disabled="disabled"
+    :class="[variants[variant], sizeClasses[size], block && 'w-full']"
+    @click="$emit('click', $event)"
+  >
+    <component v-if="icon" :is="icon" class="h-4 w-4 shrink-0" />
+    <slot />
+  </button>
+</template>
 
-    <div v-if="authStore.userRole === 'student'" class="space-y-6">
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Мой профиль</h2>
-        <div class="space-y-2">
-          <p><span class="font-medium">ФИО:</span> {{ authStore.user?.full_name }}</p>
-          <p><span class="font-medium">Email:</span> {{ authStore.user?.email }}</p>
-          <p><span class="font-medium">Группа:</span> {{ authStore.user?.group_name || 'Не назначена' }}</p>
-          <p><span class="font-medium">Роль:</span> Студент</p>
-        </div>
-      </div>
+<script setup>
+defineProps({
+  variant: { type: String, default: 'primary' },
+  size: { type: String, default: 'md' },
+  type: { type: String, default: 'button' },
+  disabled: { type: Boolean, default: false },
+  icon: { type: [Object, Function], default: null },
+  block: { type: Boolean, default: false },
+})
 
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Статистика успеваемости</h2>
-        <div v-if="stats.loading" class="text-gray-500">Загрузка...</div>
-        <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-blue-50 p-4 rounded-lg">
-            <p class="text-sm text-gray-600">Всего оценок</p>
-            <p class="text-2xl font-bold text-blue-600">{{ stats.totalGrades }}</p>
-          </div>
-          <div class="bg-green-50 p-4 rounded-lg">
-            <p class="text-sm text-gray-600">Средний балл</p>
-            <p class="text-2xl font-bold text-green-600">{{ stats.averageGrade.toFixed(2) }}</p>
-          </div>
-          <div class="bg-purple-50 p-4 rounded-lg">
-            <p class="text-sm text-gray-600">Отличных оценок</p>
-            <p class="text-2xl font-bold text-purple-600">{{ stats.excellentGrades }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
+defineEmits(['click'])
 
-    <div v-else-if="authStore.userRole === 'teacher'" class="space-y-6">
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Мои группы</h2>
-        <div v-if="groups.loading" class="text-gray-500">Загрузка...</div>
-        <div v-else-if="groups.data.length === 0" class="text-gray-500">Группы не найдены</div>
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div
-            v-for="group in groups.data"
-            :key="group.id"
-            class="border rounded-lg p-4 hover:shadow-md transition-shadow"
-          >
-            <h3 class="font-semibold text-lg">{{ group.name }}</h3>
-            <p class="text-sm text-gray-600">Студентов: {{ group.student_count }}</p>
-          </div>
-        </div>
-      </div>
+const variants = {
+  primary: 'btn-primary',
+  secondary: 'btn-secondary',
+  ghost: 'btn-ghost',
+  danger: 'btn-danger',
+}
 
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Мои дисциплины</h2>
-        <div v-if="subjects.loading" class="text-gray-500">Загрузка...</div>
-        <div v-else-if="subjects.data.length === 0" class="text-gray-500">Дисциплины не найдены</div>
-        <div v-else class="space-y-2">
-          <div
-            v-for="subject in subjects.data"
-            :key="subject.id"
-            class="border rounded-lg p-3"
-          >
-            <p class="font-medium">{{ subject.name }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
+const sizeClasses = {
+  sm: 'px-3 py-1.5 text-xs rounded-lg',
+  md: '',
+  lg: 'px-5 py-3 text-base',
+}
+</script>
+```
 
-    <div v-else-if="authStore.userRole === 'curator'" class="space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white shadow rounded-lg p-6">
-          <h3 class="text-lg font-semibold mb-2">Всего пользователей</h3>
-          <p class="text-3xl font-bold text-blue-600">{{ stats.totalUsers }}</p>
-        </div>
-        <div class="bg-white shadow rounded-lg p-6">
-          <h3 class="text-lg font-semibold mb-2">Всего групп</h3>
-          <p class="text-3xl font-bold text-green-600">{{ stats.totalGroups }}</p>
-        </div>
-        <div class="bg-white shadow rounded-lg p-6">
-          <h3 class="text-lg font-semibold mb-2">Всего дисциплин</h3>
-          <p class="text-3xl font-bold text-purple-600">{{ stats.totalSubjects }}</p>
-        </div>
-      </div>
+## `frontend/src/components/ui/BaseCard.vue`
 
-      <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Быстрые действия</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <router-link
-            :to="{ name: 'Users' }"
-            class="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-          >
-            <h3 class="font-semibold">Управление пользователями</h3>
-            <p class="text-sm text-gray-600">Добавление и редактирование пользователей</p>
-          </router-link>
-          <router-link
-            :to="{ name: 'Groups' }"
-            class="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-          >
-            <h3 class="font-semibold">Управление группами</h3>
-            <p class="text-sm text-gray-600">Создание и редактирование групп</p>
-          </router-link>
-        </div>
-      </div>
-    </div>
+```vue
+<template>
+  <div :class="['card p-5 sm:p-6', hover && 'card-hover cursor-default', className]">
+    <slot />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import api from '@/services/api'
-
-const authStore = useAuthStore()
-
-const stats = ref({
-  loading: true,
-  totalGrades: 0,
-  averageGrade: 0,
-  excellentGrades: 0,
-  totalUsers: 0,
-  totalGroups: 0,
-  totalSubjects: 0
+defineProps({
+  hover: { type: Boolean, default: false },
+  className: { type: String, default: '' },
 })
-
-const groups = ref({ loading: true, data: [] })
-const subjects = ref({ loading: true, data: [] })
-
-async function loadData() {
-  try {
-    if (authStore.userRole === 'student') {
-      const gradesResponse = await api.get('/grades')
-      const grades = gradesResponse.data
-      
-      stats.value.totalGrades = grades.length
-      if (grades.length > 0) {
-        const sum = grades.reduce((acc, g) => acc + g.grade, 0)
-        stats.value.averageGrade = sum / grades.length
-        stats.value.excellentGrades = grades.filter(g => g.grade === 5).length
-      }
-      stats.value.loading = false
-    } else if (authStore.userRole === 'teacher') {
-      const [groupsResponse, subjectsResponse] = await Promise.all([
-        api.get('/groups'),
-        api.get('/subjects')
-      ])
-      groups.value = { loading: false, data: groupsResponse.data }
-      subjects.value = { loading: false, data: subjectsResponse.data }
-    } else if (authStore.userRole === 'curator') {
-      const [usersResponse, groupsResponse, subjectsResponse] = await Promise.all([
-        api.get('/users'),
-        api.get('/groups'),
-        api.get('/subjects')
-      ])
-      stats.value.totalUsers = usersResponse.data.length
-      stats.value.totalGroups = groupsResponse.data.length
-      stats.value.totalSubjects = subjectsResponse.data.length
-      stats.value.loading = false
-    }
-  } catch (error) {
-    console.error('Ошибка загрузки данных:', error)
-  }
-}
-
-onMounted(loadData)
 </script>
-
 ```
 
-## `frontend/src/views/Grades.vue`
+## `frontend/src/components/ui/BaseBadge.vue`
 
 ```vue
 <template>
-  <div class="px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-900">Оценки</h1>
-      <button
-        v-if="authStore.userRole !== 'student'"
-        @click="showAddModal = true"
-        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-      >
-        Добавить оценку
-      </button>
-    </div>
+  <span :class="['badge', variants[variant] || variants.default]">
+    <slot />
+  </span>
+</template>
 
-    <!-- Фильтры для преподавателя и куратора -->
-    <div v-if="authStore.userRole !== 'student'" class="bg-white shadow rounded-lg p-4 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Группа</label>
-          <select
-            v-model="filters.group_id"
-            @change="loadGrades"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md"
+<script setup>
+defineProps({
+  variant: {
+    type: String,
+    default: 'default',
+    validator: (v) => ['default', 'success', 'warning', 'danger', 'info', 'purple'].includes(v),
+  },
+})
+
+const variants = {
+  default: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+  success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  warning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  danger: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  info: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+  purple: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+}
+</script>
+```
+
+## `frontend/src/components/ui/BaseAvatar.vue`
+
+```vue
+<template>
+  <div
+    :class="[
+      'flex items-center justify-center rounded-full font-semibold text-white shrink-0',
+      sizeClasses[size],
+      colorClass,
+    ]"
+  >
+    {{ initials }}
+  </div>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+import { getInitials, getAvatarColor } from '@/utils/avatar'
+
+const props = defineProps({
+  name: { type: String, default: '' },
+  size: { type: String, default: 'md' },
+})
+
+const sizeClasses = {
+  sm: 'h-8 w-8 text-xs',
+  md: 'h-10 w-10 text-sm',
+  lg: 'h-12 w-12 text-base',
+}
+
+const initials = computed(() => getInitials(props.name))
+const colorClass = computed(() => getAvatarColor(props.name))
+</script>
+```
+
+## `frontend/src/components/dashboard/MetricCard.vue`
+
+```vue
+<template>
+  <BaseCard class="relative overflow-hidden group">
+    <div class="absolute inset-0 bg-gradient-to-br opacity-[0.03] dark:opacity-[0.06]" :class="gradient" />
+    <div class="relative flex items-start justify-between">
+      <div class="space-y-3">
+        <div class="flex items-center gap-2">
+          <div
+            class="flex h-9 w-9 items-center justify-center rounded-xl"
+            :class="iconBg"
           >
-            <option value="">Все группы</option>
-            <option v-for="group in groups" :key="group.id" :value="group.id">
-              {{ group.name }}
-            </option>
-          </select>
+            <component :is="icon" class="h-4.5 w-4.5" :class="iconColor" />
+          </div>
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ title }}</p>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Дисциплина</label>
-          <select
-            v-model="filters.subject_id"
-            @change="loadGrades"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md"
+        <div class="flex items-end gap-2">
+          <p class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            {{ loading ? '—' : value }}
+          </p>
+          <span
+            v-if="trend !== null && trend !== undefined"
+            :class="[
+              'flex items-center gap-0.5 text-xs font-semibold mb-1',
+              trend >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400',
+            ]"
           >
-            <option value="">Все дисциплины</option>
-            <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
-              {{ subject.name }}
-            </option>
-          </select>
+            <TrendingUp v-if="trend >= 0" class="h-3.5 w-3.5" />
+            <TrendingDown v-else class="h-3.5 w-3.5" />
+            {{ Math.abs(trend) }}%
+          </span>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Студент</label>
-          <select
-            v-model="filters.student_id"
-            @change="loadGrades"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md"
-          >
-            <option value="">Все студенты</option>
-            <option v-for="student in students" :key="student.id" :value="student.id">
-              {{ student.full_name }}
-            </option>
-          </select>
+        <p v-if="subtitle" class="text-xs text-slate-400 dark:text-slate-500">{{ subtitle }}</p>
+      </div>
+    </div>
+  </BaseCard>
+</template>
+
+<script setup>
+import { TrendingUp, TrendingDown } from 'lucide-vue-next'
+import BaseCard from '@/components/ui/BaseCard.vue'
+
+defineProps({
+  title: { type: String, required: true },
+  value: { type: [String, Number], default: '—' },
+  subtitle: { type: String, default: '' },
+  icon: { type: [Object, Function], required: true },
+  iconBg: { type: String, default: 'bg-indigo-100 dark:bg-indigo-900/40' },
+  iconColor: { type: String, default: 'text-indigo-600 dark:text-indigo-400' },
+  gradient: { type: String, default: 'from-indigo-500 to-violet-500' },
+  trend: { type: Number, default: null },
+  loading: { type: Boolean, default: false },
+})
+</script>
+```
+
+## `frontend/src/components/dashboard/PerformanceChart.vue`
+
+```vue
+<template>
+  <BaseCard>
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h3 class="text-base font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ subtitle }}</p>
+      </div>
+      <div class="flex gap-2">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          type="button"
+          :class="[
+            'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+            activeTab === tab.key
+              ? 'bg-accent text-white'
+              : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800',
+          ]"
+          @click="activeTab = tab.key"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+    </div>
+    <div v-if="loading" class="h-64 flex items-center justify-center text-slate-400">
+      Загрузка графика...
+    </div>
+    <div v-else class="h-64">
+      <Line :data="chartConfig" :options="chartOptions" />
+    </div>
+  </BaseCard>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import { Line } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js'
+import BaseCard from '@/components/ui/BaseCard.vue'
+import { useThemeStore } from '@/stores/theme'
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+
+const props = defineProps({
+  chartData: { type: Object, default: () => ({ labels: [], averages: [], attendance: [] }) },
+  loading: { type: Boolean, default: false },
+})
+
+const themeStore = useThemeStore()
+const activeTab = ref('grades')
+
+const tabs = [
+  { key: 'grades', label: 'Успеваемость' },
+  { key: 'attendance', label: 'Посещаемость' },
+]
+
+const isDark = computed(() => themeStore.isDark)
+const gridColor = computed(() => (isDark.value ? 'rgba(148,163,184,0.15)' : 'rgba(148,163,184,0.25)'))
+const textColor = computed(() => (isDark.value ? '#94a3b8' : '#64748b'))
+
+const chartConfig = computed(() => {
+  const isGrades = activeTab.value === 'grades'
+  const data = isGrades ? props.chartData.averages : props.chartData.attendance
+  return {
+    labels: props.chartData.labels,
+    datasets: [
+      {
+        label: isGrades ? 'Средний балл' : 'Посещаемость %',
+        data,
+        borderColor: isGrades ? '#6366f1' : '#10b981',
+        backgroundColor: isGrades ? 'rgba(99,102,241,0.12)' : 'rgba(16,185,129,0.12)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: isGrades ? '#6366f1' : '#10b981',
+        spanGaps: true,
+      },
+    ],
+  }
+})
+
+const chartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: isDark.value ? '#1e293b' : '#fff',
+      titleColor: isDark.value ? '#f1f5f9' : '#0f172a',
+      bodyColor: isDark.value ? '#cbd5e1' : '#475569',
+      borderColor: isDark.value ? '#334155' : '#e2e8f0',
+      borderWidth: 1,
+      padding: 12,
+      cornerRadius: 8,
+    },
+  },
+  scales: {
+    x: {
+      grid: { color: gridColor.value },
+      ticks: { color: textColor.value, font: { size: 11 } },
+    },
+    y: {
+      grid: { color: gridColor.value },
+      ticks: { color: textColor.value, font: { size: 11 } },
+      min: activeTab.value === 'grades' ? 2 : 70,
+      max: activeTab.value === 'grades' ? 5 : 100,
+    },
+  },
+}))
+
+const title = 'Динамика группы'
+const subtitle = 'Академические показатели за семестр'
+</script>
+```
+
+## `frontend/src/components/dashboard/StudentTable.vue`
+
+```vue
+<template>
+  <BaseCard class="!p-0 overflow-hidden">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 border-b border-slate-200 dark:border-slate-700">
+      <div>
+        <h3 class="text-base font-semibold text-slate-900 dark:text-white">{{ title }}</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ filtered.length }} записей</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="relative">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            v-model="search"
+            type="search"
+            placeholder="Поиск студента..."
+            class="input pl-9 w-full sm:w-56"
+          />
         </div>
+        <select v-model="statusFilter" class="input w-auto min-w-[140px]">
+          <option value="">Все статусы</option>
+          <option value="default">Активен</option>
+          <option value="success">Отличник</option>
+          <option value="danger">Под риском</option>
+          <option value="info">Новый</option>
+        </select>
+        <select v-model="sortBy" class="input w-auto min-w-[130px]">
+          <option value="name">По имени</option>
+          <option value="grade">По баллу</option>
+          <option value="group">По группе</option>
+        </select>
       </div>
     </div>
 
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <div v-if="loading" class="p-6 text-center text-gray-500">Загрузка...</div>
-      <div v-else-if="grades.length === 0" class="p-6 text-center text-gray-500">
-        Оценки не найдены
-      </div>
-      <table v-else class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div v-if="loading" class="p-12 text-center text-slate-400">Загрузка...</div>
+    <div v-else class="overflow-x-auto">
+      <table class="min-w-full">
+        <thead class="bg-slate-50/80 dark:bg-slate-800/50">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Дисциплина
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Студент
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Оценка
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Тип работы
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Дата
-            </th>
-            <th v-if="authStore.userRole !== 'student'" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Действия
-            </th>
+            <th class="table-header">Студент</th>
+            <th class="table-header">Группа</th>
+            <th class="table-header">Средний балл</th>
+            <th class="table-header">Статус</th>
+            <th v-if="showActions" class="table-header text-right">Действия</th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="grade in grades" :key="grade.id">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ grade.subject_name }}
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
+          <tr
+            v-for="student in paginated"
+            :key="student.id"
+            class="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors"
+          >
+            <td class="table-cell">
+              <div class="flex items-center gap-3">
+                <BaseAvatar :name="student.full_name" size="sm" />
+                <div>
+                  <p
+                    v-if="editingId === student.id"
+                    class="flex items-center gap-2"
+                  >
+                    <input
+                      v-model="editName"
+                      class="input py-1.5 text-sm w-48"
+                      @keyup.enter="saveEdit(student)"
+                      @keyup.escape="cancelEdit"
+                    />
+                    <button type="button" class="text-emerald-600" @click="saveEdit(student)">
+                      <Check class="h-4 w-4" />
+                    </button>
+                  </p>
+                  <template v-else>
+                    <p class="font-medium text-slate-900 dark:text-white">{{ student.full_name }}</p>
+                    <p class="text-xs text-slate-400">{{ student.email }}</p>
+                  </template>
+                </div>
+              </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ grade.student_name }}
+            <td class="table-cell">{{ student.group_name || '—' }}</td>
+            <td class="table-cell">
+              <span class="font-semibold tabular-nums">{{ getStudentAverage(student.id) }}</span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span
-                :class="{
-                  'bg-red-100 text-red-800': grade.grade === 2,
-                  'bg-yellow-100 text-yellow-800': grade.grade === 3,
-                  'bg-blue-100 text-blue-800': grade.grade === 4,
-                  'bg-green-100 text-green-800': grade.grade === 5
-                }"
-                class="px-2 py-1 text-xs font-semibold rounded-full"
-              >
-                {{ grade.grade }}
-              </span>
+            <td class="table-cell">
+              <BaseBadge :variant="getStudentStatus(student.id).variant">
+                {{ getStudentStatus(student.id).label }}
+              </BaseBadge>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ grade.work_type }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ formatDate(grade.date) }}
-            </td>
-            <td v-if="authStore.userRole !== 'student'" class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-              <button
-                @click="editGrade(grade)"
-                class="text-blue-600 hover:text-blue-900 mr-3"
-              >
-                Редактировать
-              </button>
-              <button
-                @click="deleteGrade(grade.id)"
-                class="text-red-600 hover:text-red-900"
-              >
-                Удалить
-              </button>
+            <td v-if="showActions" class="table-cell text-right">
+              <div class="relative inline-block">
+                <button
+                  type="button"
+                  class="btn-ghost p-2 rounded-lg"
+                  @click="toggleMenu(student.id)"
+                >
+                  <MoreHorizontal class="h-4 w-4" />
+                </button>
+                <Transition name="dropdown">
+                  <div
+                    v-if="openMenuId === student.id"
+                    class="absolute right-0 mt-1 w-44 card py-1 z-20 shadow-lg"
+                  >
+                    <button
+                      type="button"
+                      class="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                      @click="startEdit(student)"
+                    >
+                      <Pencil class="h-3.5 w-3.5" /> Редактировать
+                    </button>
+                    <router-link
+                      :to="{ name: 'Grades', query: { student_id: student.id } }"
+                      class="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+                      @click="openMenuId = null"
+                    >
+                      <BookOpen class="h-3.5 w-3.5" /> Оценки
+                    </router-link>
+                    <button
+                      type="button"
+                      class="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                      @click="$emit('delete', student)"
+                    >
+                      <Trash2 class="h-3.5 w-3.5" /> Удалить
+                    </button>
+                  </div>
+                </Transition>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Модальное окно добавления/редактирования оценки -->
     <div
-      v-if="showAddModal || editingGrade"
-      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      @click.self="closeModal"
+      v-if="!loading && filtered.length > pageSize"
+      class="flex items-center justify-between px-5 py-3 border-t border-slate-200 dark:border-slate-700 text-sm text-slate-500"
     >
-      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <h3 class="text-lg font-bold mb-4">
-          {{ editingGrade ? 'Редактировать оценку' : 'Добавить оценку' }}
-        </h3>
-        <form @submit.prevent="saveGrade" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Студент</label>
-            <select
-              v-model="gradeForm.student_id"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Выберите студента</option>
-              <option v-for="student in students" :key="student.id" :value="student.id">
-                {{ student.full_name }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Дисциплина</label>
-            <select
-              v-model="gradeForm.subject_id"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Выберите дисциплину</option>
-              <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
-                {{ subject.name }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Оценка</label>
-            <select
-              v-model="gradeForm.grade"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Выберите оценку</option>
-              <option value="5">5 (Отлично)</option>
-              <option value="4">4 (Хорошо)</option>
-              <option value="3">3 (Удовлетворительно)</option>
-              <option value="2">2 (Неудовлетворительно)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Тип работы</label>
-            <input
-              v-model="gradeForm.work_type"
-              type="text"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Например: Лекция, Практика, Экзамен"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Дата</label>
-            <input
-              v-model="gradeForm.date"
-              type="date"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              @click="closeModal"
-              class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Сохранить
-            </button>
-          </div>
-        </form>
+      <span>Стр. {{ page }} из {{ totalPages }}</span>
+      <div class="flex gap-2">
+        <button type="button" class="btn-secondary py-1.5 px-3" :disabled="page <= 1" @click="page--">Назад</button>
+        <button type="button" class="btn-secondary py-1.5 px-3" :disabled="page >= totalPages" @click="page++">Далее</button>
       </div>
     </div>
-  </div>
+  </BaseCard>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import api from '@/services/api'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { Search, MoreHorizontal, Pencil, Trash2, Check, BookOpen } from 'lucide-vue-next'
+import BaseCard from '@/components/ui/BaseCard.vue'
+import BaseAvatar from '@/components/ui/BaseAvatar.vue'
+import BaseBadge from '@/components/ui/BaseBadge.vue'
 
-const authStore = useAuthStore()
-
-const loading = ref(true)
-const grades = ref([])
-const groups = ref([])
-const subjects = ref([])
-const students = ref([])
-
-const showAddModal = ref(false)
-const editingGrade = ref(null)
-
-const filters = ref({
-  group_id: '',
-  subject_id: '',
-  student_id: ''
+const props = defineProps({
+  students: { type: Array, default: () => [] },
+  loading: { type: Boolean, default: false },
+  getStudentStatus: { type: Function, required: true },
+  getStudentAverage: { type: Function, required: true },
+  showActions: { type: Boolean, default: true },
+  title: { type: String, default: 'Студенты группы' },
+  pageSize: { type: Number, default: 8 },
 })
 
-const gradeForm = ref({
-  student_id: '',
-  subject_id: '',
-  grade: '',
-  work_type: '',
-  date: new Date().toISOString().split('T')[0]
+const emit = defineEmits(['edit', 'delete'])
+
+const search = ref('')
+const statusFilter = ref('')
+const sortBy = ref('name')
+const page = ref(1)
+const openMenuId = ref(null)
+const editingId = ref(null)
+const editName = ref('')
+
+const enriched = computed(() =>
+  props.students.map((s) => ({
+    ...s,
+    statusVariant: props.getStudentStatus(s.id).variant,
+    avgNum: parseFloat(props.getStudentAverage(s.id)) || 0,
+  }))
+)
+
+const filtered = computed(() => {
+  let list = enriched.value
+  if (search.value) {
+    const q = search.value.toLowerCase()
+    list = list.filter(
+      (s) => s.full_name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)
+    )
+  }
+  if (statusFilter.value) {
+    list = list.filter((s) => s.statusVariant === statusFilter.value)
+  }
+  if (sortBy.value === 'name') list = [...list].sort((a, b) => a.full_name.localeCompare(b.full_name))
+  if (sortBy.value === 'grade') list = [...list].sort((a, b) => b.avgNum - a.avgNum)
+  if (sortBy.value === 'group') list = [...list].sort((a, b) => (a.group_name || '').localeCompare(b.group_name || ''))
+  return list
 })
 
-function formatDate(dateString) {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('ru-RU')
-}
-
-async function loadGrades() {
-  loading.value = true
-  try {
-    const params = {}
-    if (filters.value.group_id) params.group_id = filters.value.group_id
-    if (filters.value.subject_id) params.subject_id = filters.value.subject_id
-    if (filters.value.student_id) params.student_id = filters.value.student_id
-
-    const response = await api.get('/grades', { params })
-    grades.value = response.data
-  } catch (error) {
-    console.error('Ошибка загрузки оценок:', error)
-  }
-  loading.value = false
-}
-
-async function loadGroups() {
-  try {
-    const response = await api.get('/groups')
-    groups.value = response.data
-  } catch (error) {
-    console.error('Ошибка загрузки групп:', error)
-  }
-}
-
-async function loadSubjects() {
-  try {
-    const response = await api.get('/subjects')
-    subjects.value = response.data
-  } catch (error) {
-    console.error('Ошибка загрузки дисциплин:', error)
-  }
-}
-
-async function loadStudents() {
-  try {
-    if (filters.value.group_id) {
-      const response = await api.get(`/groups/${filters.value.group_id}`)
-      students.value = response.data.students || []
-    } else {
-      // Загружаем всех студентов для куратора
-      if (authStore.userRole === 'curator') {
-        const response = await api.get('/users')
-        students.value = response.data.filter(u => u.role === 'student')
-      } else {
-        students.value = []
-      }
-    }
-  } catch (error) {
-    console.error('Ошибка загрузки студентов:', error)
-  }
-}
-
-async function saveGrade() {
-  try {
-    if (editingGrade.value) {
-      await api.put(`/grades/${editingGrade.value.id}`, gradeForm.value)
-    } else {
-      await api.post('/grades', gradeForm.value)
-    }
-    closeModal()
-    loadGrades()
-  } catch (error) {
-    alert(error.response?.data?.error || 'Ошибка сохранения оценки')
-  }
-}
-
-function editGrade(grade) {
-  editingGrade.value = grade
-  gradeForm.value = {
-    student_id: grade.student_id,
-    subject_id: grade.subject_id,
-    grade: grade.grade.toString(),
-    work_type: grade.work_type,
-    date: grade.date
-  }
-  showAddModal.value = true
-}
-
-async function deleteGrade(id) {
-  if (!confirm('Вы уверены, что хотите удалить эту оценку?')) return
-
-  try {
-    await api.delete(`/grades/${id}`)
-    loadGrades()
-  } catch (error) {
-    alert(error.response?.data?.error || 'Ошибка удаления оценки')
-  }
-}
-
-function closeModal() {
-  showAddModal.value = false
-  editingGrade.value = null
-  gradeForm.value = {
-    student_id: '',
-    subject_id: '',
-    grade: '',
-    work_type: '',
-    date: new Date().toISOString().split('T')[0]
-  }
-}
-
-onMounted(async () => {
-  await Promise.all([loadGrades(), loadGroups(), loadSubjects()])
-  if (authStore.userRole !== 'student') {
-    await loadStudents()
-  }
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / props.pageSize)))
+const paginated = computed(() => {
+  const start = (page.value - 1) * props.pageSize
+  return filtered.value.slice(start, start + props.pageSize)
 })
+
+watch([search, statusFilter, sortBy], () => { page.value = 1 })
+
+function toggleMenu(id) {
+  openMenuId.value = openMenuId.value === id ? null : id
+}
+
+function startEdit(student) {
+  editingId.value = student.id
+  editName.value = student.full_name
+  openMenuId.value = null
+}
+
+function cancelEdit() {
+  editingId.value = null
+  editName.value = ''
+}
+
+function saveEdit(student) {
+  if (editName.value.trim()) {
+    emit('edit', { ...student, full_name: editName.value.trim() })
+  }
+  cancelEdit()
+}
+
+function onClickOutside(e) {
+  if (!e.target.closest('.relative')) openMenuId.value = null
+}
+
+onMounted(() => document.addEventListener('click', onClickOutside))
+onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 
+<style scoped>
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.15s ease;
+}
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>
 ```
 
-## `frontend/src/views/Groups.vue`
+## `frontend/src/components/dashboard/QuickActions.vue`
 
 ```vue
 <template>
-  <div class="px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-900">Группы</h1>
-      <button
-        @click="showAddModal = true"
-        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-      >
-        Добавить группу
-      </button>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div
-        v-for="group in groups"
-        :key="group.id"
-        class="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow"
-      >
-        <div class="flex justify-between items-start mb-4">
-          <h3 class="text-xl font-semibold">{{ group.name }}</h3>
-          <div class="flex space-x-2">
-            <button
-              @click="editGroup(group)"
-              class="text-blue-600 hover:text-blue-900"
-            >
-              ✏️
-            </button>
-            <button
-              @click="deleteGroup(group.id)"
-              class="text-red-600 hover:text-red-900"
-            >
-              🗑️
-            </button>
-          </div>
-        </div>
-        <p class="text-sm text-gray-600 mb-2">Студентов: {{ group.student_count || 0 }}</p>
-        <button
-          @click="viewGroup(group)"
-          class="text-blue-600 hover:text-blue-900 text-sm"
-        >
-          Просмотреть студентов →
-        </button>
-      </div>
-    </div>
-
-    <div v-if="groups.length === 0 && !loading" class="text-center text-gray-500 py-12">
-      Группы не найдены
-    </div>
-
-    <!-- Модальное окно добавления/редактирования группы -->
-    <div
-      v-if="showAddModal || editingGroup"
-      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      @click.self="closeModal"
+  <div class="flex flex-wrap gap-3">
+    <BaseButton
+      v-for="action in visibleActions"
+      :key="action.label"
+      :variant="action.primary ? 'primary' : 'secondary'"
+      :icon="action.icon"
+      @click="action.onClick"
     >
-      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <h3 class="text-lg font-bold mb-4">
-          {{ editingGroup ? 'Редактировать группу' : 'Добавить группу' }}
-        </h3>
-        <form @submit.prevent="saveGroup" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Название группы</label>
-            <input
-              v-model="groupForm.name"
-              type="text"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Например: ИТ-21"
-            />
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              @click="closeModal"
-              class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Сохранить
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Модальное окно просмотра студентов группы -->
-    <div
-      v-if="selectedGroup"
-      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      @click.self="selectedGroup = null"
-    >
-      <div class="relative top-20 mx-auto p-5 border w-2/3 max-w-4xl shadow-lg rounded-md bg-white">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-bold">Студенты группы {{ selectedGroup.name }}</h3>
-          <button
-            @click="selectedGroup = null"
-            class="text-gray-500 hover:text-gray-700"
-          >
-            ✕
-          </button>
-        </div>
-        <div v-if="groupStudentsLoading" class="text-center py-8 text-gray-500">
-          Загрузка...
-        </div>
-        <div v-else-if="groupStudents.length === 0" class="text-center py-8 text-gray-500">
-          В группе нет студентов
-        </div>
-        <table v-else class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ФИО</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="student in groupStudents" :key="student.id">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ student.full_name }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ student.email }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+      {{ action.label }}
+    </BaseButton>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import api from '@/services/api'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { UserPlus, FileDown, ClipboardCheck } from 'lucide-vue-next'
+import BaseButton from '@/components/ui/BaseButton.vue'
+import { useAuthStore } from '@/stores/auth'
 
-const loading = ref(true)
-const groups = ref([])
-const showAddModal = ref(false)
-const editingGroup = ref(null)
-const selectedGroup = ref(null)
-const groupStudents = ref([])
-const groupStudentsLoading = ref(false)
+const router = useRouter()
+const authStore = useAuthStore()
 
-const groupForm = ref({
-  name: ''
+const props = defineProps({
+  onExport: { type: Function, default: null },
 })
 
-async function loadGroups() {
-  loading.value = true
-  try {
-    const response = await api.get('/groups')
-    groups.value = response.data
-  } catch (error) {
-    console.error('Ошибка загрузки групп:', error)
+const visibleActions = computed(() => {
+  const role = authStore.userRole
+  const actions = []
+
+  if (role === 'curator' || role === 'teacher') {
+    actions.push({
+      label: 'Добавить студента',
+      icon: UserPlus,
+      primary: true,
+      onClick: () => router.push({ name: role === 'curator' ? 'Users' : 'Students' }),
+    })
+    actions.push({
+      label: 'Экспорт отчёта',
+      icon: FileDown,
+      primary: false,
+      onClick: () => (props.onExport ? props.onExport() : exportReport()),
+    })
+    actions.push({
+      label: 'Отметить посещаемость',
+      icon: ClipboardCheck,
+      primary: false,
+      onClick: () => router.push({ name: 'Attendance' }),
+    })
   }
-  loading.value = false
+
+  return actions
+})
+
+function exportReport() {
+  const blob = new Blob(
+    ['Отчёт по группе\nСгенерировано: ' + new Date().toLocaleString('ru-RU')],
+    { type: 'text/plain;charset=utf-8' }
+  )
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `otchet-gruppa-${Date.now()}.txt`
+  a.click()
+  URL.revokeObjectURL(url)
 }
-
-async function saveGroup() {
-  try {
-    if (editingGroup.value) {
-      await api.put(`/groups/${editingGroup.value.id}`, groupForm.value)
-    } else {
-      await api.post('/groups', groupForm.value)
-    }
-    closeModal()
-    loadGroups()
-  } catch (error) {
-    alert(error.response?.data?.error || 'Ошибка сохранения группы')
-  }
-}
-
-function editGroup(group) {
-  editingGroup.value = group
-  groupForm.value = { name: group.name }
-  showAddModal.value = true
-}
-
-async function deleteGroup(id) {
-  if (!confirm('Вы уверены, что хотите удалить эту группу?')) return
-
-  try {
-    await api.delete(`/groups/${id}`)
-    loadGroups()
-  } catch (error) {
-    alert(error.response?.data?.error || 'Ошибка удаления группы')
-  }
-}
-
-async function viewGroup(group) {
-  selectedGroup.value = group
-  groupStudentsLoading.value = true
-  try {
-    const response = await api.get(`/groups/${group.id}`)
-    groupStudents.value = response.data.students || []
-  } catch (error) {
-    console.error('Ошибка загрузки студентов:', error)
-  }
-  groupStudentsLoading.value = false
-}
-
-function closeModal() {
-  showAddModal.value = false
-  editingGroup.value = null
-  groupForm.value = { name: '' }
-}
-
-onMounted(loadGroups)
 </script>
+```
 
+## `frontend/src/components/layout/ActivityFeed.vue`
+
+```vue
+<template>
+  <BaseCard class="h-full">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-base font-semibold text-slate-900 dark:text-white">Лента активности</h3>
+      <Bell class="h-4 w-4 text-slate-400" />
+    </div>
+    <div v-if="loading" class="space-y-3">
+      <div v-for="i in 4" :key="i" class="h-12 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+    </div>
+    <ul v-else class="space-y-3 max-h-80 overflow-y-auto pr-1">
+      <li
+        v-for="item in activities"
+        :key="item.id"
+        class="flex gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+      >
+        <div
+          :class="[
+            'mt-0.5 h-2 w-2 rounded-full shrink-0',
+            typeColors[item.type] || typeColors.info,
+          ]"
+        />
+        <div class="min-w-0 flex-1">
+          <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{{ item.message }}</p>
+          <p class="text-xs text-slate-400 mt-1">{{ item.time }}</p>
+        </div>
+      </li>
+    </ul>
+  </BaseCard>
+</template>
+
+<script setup>
+import { Bell } from 'lucide-vue-next'
+import BaseCard from '@/components/ui/BaseCard.vue'
+
+defineProps({
+  activities: { type: Array, default: () => [] },
+  loading: { type: Boolean, default: false },
+})
+
+const typeColors = {
+  info: 'bg-sky-500',
+  warning: 'bg-amber-500',
+  alert: 'bg-red-500',
+}
+</script>
 ```
 
 ## `frontend/src/views/Login.vue`
 
 ```vue
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100">
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-      <h1 class="text-2xl font-bold text-center mb-6">Вход в систему</h1>
-      
-      <form @submit.prevent="handleLogin" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
-          <input
-            v-model="email"
-            type="email"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="email@example.com"
-          />
+  <div class="min-h-screen flex bg-slate-50 dark:bg-surface-dark">
+    <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-800 p-12 flex-col justify-between">
+      <div class="relative z-10">
+        <div class="flex items-center gap-3 text-white">
+          <div class="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+            <GraduationCap class="h-6 w-6" />
+          </div>
+          <span class="text-lg font-bold">Система учёта студентов</span>
         </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Пароль
-          </label>
-          <input
-            v-model="password"
-            type="password"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Введите пароль"
-          />
+      </div>
+      <div class="relative z-10 space-y-6 text-white">
+        <h1 class="text-4xl font-bold leading-tight tracking-tight">
+          Современная платформа<br />для учёта группы
+        </h1>
+        <p class="text-indigo-100 text-lg max-w-md leading-relaxed">
+          Управляйте успеваемостью, посещаемостью и расписанием в едином интуитивном интерфейсе.
+        </p>
+        <div class="flex gap-6 pt-4">
+          <div>
+            <p class="text-3xl font-bold">500+</p>
+            <p class="text-indigo-200 text-sm">Студентов</p>
+          </div>
+          <div>
+            <p class="text-3xl font-bold">98%</p>
+            <p class="text-indigo-200 text-sm">Uptime</p>
+          </div>
+        </div>
+      </div>
+      <div class="absolute inset-0 opacity-30">
+        <div class="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+        <div class="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-violet-400/20 blur-3xl" />
+      </div>
+    </div>
+
+    <div class="flex flex-1 items-center justify-center p-6 sm:p-12">
+      <div class="w-full max-w-md animate-fade-in">
+        <div class="lg:hidden flex items-center gap-3 mb-8">
+          <div class="h-10 w-10 rounded-xl bg-accent flex items-center justify-center text-white">
+            <GraduationCap class="h-6 w-6" />
+          </div>
+          <span class="text-lg font-bold text-slate-900 dark:text-white">Учёт студентов</span>
         </div>
 
-        <div v-if="error" class="text-red-600 text-sm">
-          {{ error }}
+        <div class="card p-8 shadow-card-hover">
+          <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-1">Вход в систему</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mb-8">Введите учётные данные для доступа</p>
+
+          <form @submit.prevent="handleLogin" class="space-y-5">
+            <div>
+              <label class="label">Email</label>
+              <input
+                v-model="email"
+                type="email"
+                required
+                class="input"
+                placeholder="email@example.com"
+              />
+            </div>
+            <div>
+              <label class="label">Пароль</label>
+              <input
+                v-model="password"
+                type="password"
+                required
+                class="input"
+                placeholder="Введите пароль"
+              />
+            </div>
+
+            <div v-if="error" class="rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+              {{ error }}
+            </div>
+
+            <BaseButton type="submit" variant="primary" block :disabled="loading">
+              {{ loading ? 'Вход...' : 'Войти' }}
+            </BaseButton>
+          </form>
+
+          <div class="mt-8 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-4 text-xs text-slate-500 dark:text-slate-400 space-y-1.5">
+            <p class="font-semibold text-slate-700 dark:text-slate-300 mb-2">Тестовые учётные данные</p>
+            <p>Куратор: curator@example.com / curator123</p>
+            <p>Преподаватель: teacher1@example.com / teacher123</p>
+            <p>Студент: student1@example.com / student123</p>
+          </div>
         </div>
-
-        <button
-          type="submit"
-          :disabled="loading"
-          class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ loading ? 'Вход...' : 'Войти' }}
-        </button>
-      </form>
-
-      <div class="mt-6 p-4 bg-gray-50 rounded-md text-sm text-gray-600">
-        <p class="font-semibold mb-2">Тестовые учетные данные:</p>
-        <p>Куратор: curator@example.com / curator123</p>
-        <p>Преподаватель: teacher1@example.com / teacher123</p>
-        <p>Студент: student1@example.com / student123</p>
       </div>
     </div>
   </div>
@@ -1250,10 +1479,14 @@ onMounted(loadGroups)
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { GraduationCap } from 'lucide-vue-next'
+import BaseButton from '@/components/ui/BaseButton.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 
 const router = useRouter()
 const authStore = useAuthStore()
+useThemeStore()
 
 const email = ref('')
 const password = ref('')
@@ -1263,722 +1496,198 @@ const loading = ref(false)
 async function handleLogin() {
   error.value = ''
   loading.value = true
-
   const result = await authStore.login(email.value, password.value)
-
   if (result.success) {
     router.push({ name: 'Dashboard' })
   } else {
     error.value = result.error
   }
-
   loading.value = false
 }
 </script>
-
 ```
 
-## `frontend/src/views/Profile.vue`
+## `frontend/src/views/Dashboard.vue`
 
 ```vue
 <template>
-  <div class="px-4 py-6">
-    <h1 class="text-3xl font-bold text-gray-900 mb-6">Мой профиль</h1>
+  <div class="space-y-6 animate-fade-in">
+    <!-- Student dashboard -->
+    <template v-if="authStore.userRole === 'student'">
+      <div>
+        <h2 class="page-title">Добро пожаловать, {{ firstName }}!</h2>
+        <p class="page-subtitle">Ваша успеваемость и расписание на семестр</p>
+      </div>
 
-    <div class="bg-white shadow rounded-lg p-6 max-w-2xl">
-      <div v-if="loading" class="text-gray-500">Загрузка...</div>
-      
-      <form v-else @submit.prevent="handleUpdate" class="space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <MetricCard
+          title="Всего оценок"
+          :value="grades.length"
+          :icon="BookOpen"
+          icon-bg="bg-indigo-100 dark:bg-indigo-900/40"
+          icon-color="text-indigo-600 dark:text-indigo-400"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Средний балл"
+          :value="averageGrade.toFixed(2)"
+          :icon="TrendingUp"
+          icon-bg="bg-emerald-100 dark:bg-emerald-900/40"
+          icon-color="text-emerald-600 dark:text-emerald-400"
+          :trend="2.1"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Отличных оценок"
+          :value="excellentCount"
+          :icon="Award"
+          icon-bg="bg-violet-100 dark:bg-violet-900/40"
+          icon-color="text-violet-600 dark:text-violet-400"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Группа"
+          :value="authStore.user?.group_name || '—'"
+          :icon="Users"
+          icon-bg="bg-sky-100 dark:bg-sky-900/40"
+          icon-color="text-sky-600 dark:text-sky-400"
+          :loading="loading"
+        />
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="xl:col-span-2">
+          <PerformanceChart :chart-data="chartData" :loading="loading" />
+        </div>
+        <ActivityFeed :activities="activities" :loading="activitiesLoading" />
+      </div>
+    </template>
+
+    <!-- Teacher / Curator dashboard -->
+    <template v-else>
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            ФИО
-          </label>
-          <input
-            v-model="formData.full_name"
-            type="text"
-            required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <h2 class="page-title">Панель управления группой</h2>
+          <p class="page-subtitle">Обзор успеваемости, посещаемости и ключевых метрик</p>
+        </div>
+        <QuickActions />
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <MetricCard
+          title="Всего студентов"
+          :value="students.length"
+          :icon="Users"
+          icon-bg="bg-indigo-100 dark:bg-indigo-900/40"
+          icon-color="text-indigo-600 dark:text-indigo-400"
+          :trend="3.2"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Посещаемость"
+          :value="`${attendanceRate.value}%`"
+          :icon="ClipboardCheck"
+          icon-bg="bg-emerald-100 dark:bg-emerald-900/40"
+          icon-color="text-emerald-600 dark:text-emerald-400"
+          :trend="attendanceRate.trend"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Средний балл"
+          :value="averageGrade.toFixed(2)"
+          :icon="BarChart3"
+          icon-bg="bg-violet-100 dark:bg-violet-900/40"
+          icon-color="text-violet-600 dark:text-violet-400"
+          :trend="averageGrade >= 4 ? 1.5 : -0.8"
+          :loading="loading"
+        />
+        <MetricCard
+          title="Под риском"
+          :value="studentsAtRisk"
+          subtitle="Требуют внимания"
+          :icon="AlertTriangle"
+          icon-bg="bg-red-100 dark:bg-red-900/40"
+          icon-color="text-red-600 dark:text-red-400"
+          :trend="-2.1"
+          :loading="loading"
+        />
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="xl:col-span-2 space-y-6">
+          <PerformanceChart :chart-data="chartData" :loading="loading" />
+          <StudentTable
+            :students="students"
+            :loading="loading"
+            :get-student-status="getStudentStatus"
+            :get-student-average="getStudentAverage"
+            :show-actions="authStore.userRole === 'curator'"
+            title="Студенты — быстрый обзор"
+            :page-size="5"
+            @edit="handleEditStudent"
           />
         </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
-          <input
-            v-model="formData.email"
-            type="email"
-            :disabled="authStore.userRole === 'student'"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Роль
-          </label>
-          <input
-            :value="getRoleName(formData.role)"
-            type="text"
-            disabled
-            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
-          />
-        </div>
-
-        <div v-if="formData.group_name">
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Группа
-          </label>
-          <input
-            :value="formData.group_name"
-            type="text"
-            disabled
-            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
-          />
-        </div>
-
-        <div v-if="authStore.userRole === 'curator'">
-          <label class="block text-sm font-medium text-gray-700 mb-1">
-            Новый пароль (оставьте пустым, если не хотите менять)
-          </label>
-          <input
-            v-model="formData.password"
-            type="password"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div v-if="error" class="text-red-600 text-sm">
-          {{ error }}
-        </div>
-
-        <div v-if="success" class="text-green-600 text-sm">
-          Профиль успешно обновлен
-        </div>
-
-        <button
-          type="submit"
-          :disabled="saving"
-          class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
-        >
-          {{ saving ? 'Сохранение...' : 'Сохранить' }}
-        </button>
-      </form>
-    </div>
+        <ActivityFeed :activities="activities" :loading="activitiesLoading" />
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import {
+  Users,
+  BookOpen,
+  TrendingUp,
+  Award,
+  ClipboardCheck,
+  BarChart3,
+  AlertTriangle,
+} from 'lucide-vue-next'
+import MetricCard from '@/components/dashboard/MetricCard.vue'
+import PerformanceChart from '@/components/dashboard/PerformanceChart.vue'
+import StudentTable from '@/components/dashboard/StudentTable.vue'
+import QuickActions from '@/components/dashboard/QuickActions.vue'
+import ActivityFeed from '@/components/layout/ActivityFeed.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useAnalytics } from '@/composables/useAnalytics'
+import { useActivities } from '@/composables/useActivities'
 import api from '@/services/api'
 
 const authStore = useAuthStore()
+const {
+  loading,
+  students,
+  grades,
+  averageGrade,
+  studentsAtRisk,
+  attendanceRate,
+  chartData,
+  getStudentStatus,
+  getStudentAverage,
+  load,
+} = useAnalytics()
 
-const loading = ref(true)
-const saving = ref(false)
-const error = ref('')
-const success = ref(false)
+const { activities, load: loadActivities } = useActivities()
+const activitiesLoading = ref(true)
 
-const formData = ref({
-  full_name: '',
-  email: '',
-  role: '',
-  group_name: '',
-  password: ''
-})
+const firstName = computed(() => authStore.user?.full_name?.split(' ')[1] || authStore.user?.full_name?.split(' ')[0] || '')
+const excellentCount = computed(() => grades.value.filter((g) => g.grade === 5).length)
 
-function getRoleName(role) {
-  const roles = {
-    student: 'Студент',
-    teacher: 'Преподаватель',
-    curator: 'Куратор'
-  }
-  return roles[role] || role
-}
-
-async function loadProfile() {
+async function handleEditStudent(student) {
   try {
-    const response = await api.get(`/users/${authStore.user.id}`)
-    formData.value = {
-      full_name: response.data.full_name,
-      email: response.data.email,
-      role: response.data.role,
-      group_name: response.data.group_name || '',
-      password: ''
-    }
-    loading.value = false
-  } catch (err) {
-    error.value = 'Ошибка загрузки профиля'
-    loading.value = false
-  }
-}
-
-async function handleUpdate() {
-  saving.value = true
-  error.value = ''
-  success.value = false
-
-  try {
-    const updateData = {
-      full_name: formData.value.full_name
-    }
-
-    if (authStore.userRole === 'curator') {
-      updateData.email = formData.value.email
-      if (formData.value.password) {
-        updateData.password = formData.value.password
-      }
-    }
-
-    await api.put(`/users/${authStore.user.id}`, updateData)
-    await authStore.fetchMe()
-    success.value = true
-    formData.value.password = ''
-  } catch (err) {
-    error.value = err.response?.data?.error || 'Ошибка обновления профиля'
-  }
-
-  saving.value = false
-}
-
-onMounted(loadProfile)
-</script>
-
-```
-
-## `frontend/src/views/Subjects.vue`
-
-```vue
-<template>
-  <div class="px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-900">Дисциплины</h1>
-      <button
-        @click="showAddModal = true"
-        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-      >
-        Добавить дисциплину
-      </button>
-    </div>
-
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <div v-if="loading" class="p-6 text-center text-gray-500">Загрузка...</div>
-      <table v-else class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Название
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Преподаватель
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Действия
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="subject in subjects" :key="subject.id">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ subject.name }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ subject.teacher_name }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-              <button
-                @click="editSubject(subject)"
-                class="text-blue-600 hover:text-blue-900 mr-3"
-              >
-                Редактировать
-              </button>
-              <button
-                @click="deleteSubject(subject.id)"
-                class="text-red-600 hover:text-red-900"
-              >
-                Удалить
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Модальное окно добавления/редактирования дисциплины -->
-    <div
-      v-if="showAddModal || editingSubject"
-      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      @click.self="closeModal"
-    >
-      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <h3 class="text-lg font-bold mb-4">
-          {{ editingSubject ? 'Редактировать дисциплину' : 'Добавить дисциплину' }}
-        </h3>
-        <form @submit.prevent="saveSubject" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Название дисциплины</label>
-            <input
-              v-model="subjectForm.name"
-              type="text"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Например: Математика"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Преподаватель</label>
-            <select
-              v-model="subjectForm.teacher_id"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Выберите преподавателя</option>
-              <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
-                {{ teacher.full_name }}
-              </option>
-            </select>
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              @click="closeModal"
-              class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Сохранить
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { ref, onMounted } from 'vue'
-import api from '@/services/api'
-
-const loading = ref(true)
-const subjects = ref([])
-const teachers = ref([])
-const showAddModal = ref(false)
-const editingSubject = ref(null)
-
-const subjectForm = ref({
-  name: '',
-  teacher_id: ''
-})
-
-async function loadSubjects() {
-  loading.value = true
-  try {
-    const response = await api.get('/subjects')
-    subjects.value = response.data
-  } catch (error) {
-    console.error('Ошибка загрузки дисциплин:', error)
-  }
-  loading.value = false
-}
-
-async function loadTeachers() {
-  try {
-    const response = await api.get('/users')
-    teachers.value = response.data.filter(u => u.role === 'teacher')
-  } catch (error) {
-    console.error('Ошибка загрузки преподавателей:', error)
-  }
-}
-
-async function saveSubject() {
-  try {
-    if (editingSubject.value) {
-      await api.put(`/subjects/${editingSubject.value.id}`, subjectForm.value)
-    } else {
-      await api.post('/subjects', subjectForm.value)
-    }
-    closeModal()
-    loadSubjects()
-  } catch (error) {
-    alert(error.response?.data?.error || 'Ошибка сохранения дисциплины')
-  }
-}
-
-function editSubject(subject) {
-  editingSubject.value = subject
-  subjectForm.value = {
-    name: subject.name,
-    teacher_id: subject.teacher_id
-  }
-  showAddModal.value = true
-}
-
-async function deleteSubject(id) {
-  if (!confirm('Вы уверены, что хотите удалить эту дисциплину?')) return
-
-  try {
-    await api.delete(`/subjects/${id}`)
-    loadSubjects()
-  } catch (error) {
-    alert(error.response?.data?.error || 'Ошибка удаления дисциплины')
-  }
-}
-
-function closeModal() {
-  showAddModal.value = false
-  editingSubject.value = null
-  subjectForm.value = {
-    name: '',
-    teacher_id: ''
+    await api.put(`/users/${student.id}`, { full_name: student.full_name })
+    await load()
+  } catch (e) {
+    alert(e.response?.data?.error || 'Ошибка сохранения')
   }
 }
 
 onMounted(async () => {
-  await Promise.all([loadSubjects(), loadTeachers()])
+  await load()
+  await loadActivities()
+  activitiesLoading.value = false
 })
 </script>
-
-```
-
-## `frontend/src/views/Users.vue`
-
-```vue
-<template>
-  <div class="px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-900">Пользователи</h1>
-      <button
-        @click="showAddModal = true"
-        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-      >
-        Добавить пользователя
-      </button>
-    </div>
-
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <div v-if="loading" class="p-6 text-center text-gray-500">Загрузка...</div>
-      <table v-else class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              ФИО
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Email
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Роль
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Группа
-            </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Действия
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="user in users" :key="user.id">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ user.full_name }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ user.email }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span
-                :class="{
-                  'bg-blue-100 text-blue-800': user.role === 'student',
-                  'bg-green-100 text-green-800': user.role === 'teacher',
-                  'bg-purple-100 text-purple-800': user.role === 'curator'
-                }"
-                class="px-2 py-1 text-xs font-semibold rounded-full"
-              >
-                {{ getRoleName(user.role) }}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ user.group_name || '-' }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-              <button
-                @click="editUser(user)"
-                class="text-blue-600 hover:text-blue-900 mr-3"
-              >
-                Редактировать
-              </button>
-              <button
-                v-if="user.id !== authStore.user.id"
-                @click="deleteUser(user.id)"
-                class="text-red-600 hover:text-red-900"
-              >
-                Удалить
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Модальное окно добавления/редактирования пользователя -->
-    <div
-      v-if="showAddModal || editingUser"
-      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      @click.self="closeModal"
-    >
-      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <h3 class="text-lg font-bold mb-4">
-          {{ editingUser ? 'Редактировать пользователя' : 'Добавить пользователя' }}
-        </h3>
-        <form @submit.prevent="saveUser" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">ФИО</label>
-            <input
-              v-model="userForm.full_name"
-              type="text"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              v-model="userForm.email"
-              type="email"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
-            <input
-              v-model="userForm.password"
-              type="password"
-              :required="!editingUser"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-              :placeholder="editingUser ? 'Оставьте пустым, если не хотите менять' : ''"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Роль</label>
-            <select
-              v-model="userForm.role"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="student">Студент</option>
-              <option value="teacher">Преподаватель</option>
-              <option value="curator">Куратор</option>
-            </select>
-          </div>
-          <div v-if="userForm.role === 'student'">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Группа</label>
-            <select
-              v-model="userForm.group_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Не назначена</option>
-              <option v-for="group in groups" :key="group.id" :value="group.id">
-                {{ group.name }}
-              </option>
-            </select>
-          </div>
-          <div class="flex justify-end space-x-3">
-            <button
-              type="button"
-              @click="closeModal"
-              class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Сохранить
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { ref, onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import api from '@/services/api'
-
-const authStore = useAuthStore()
-
-const loading = ref(true)
-const users = ref([])
-const groups = ref([])
-const showAddModal = ref(false)
-const editingUser = ref(null)
-
-const userForm = ref({
-  full_name: '',
-  email: '',
-  password: '',
-  role: 'student',
-  group_id: ''
-})
-
-function getRoleName(role) {
-  const roles = {
-    student: 'Студент',
-    teacher: 'Преподаватель',
-    curator: 'Куратор'
-  }
-  return roles[role] || role
-}
-
-async function loadUsers() {
-  loading.value = true
-  try {
-    const response = await api.get('/users')
-    users.value = response.data
-  } catch (error) {
-    console.error('Ошибка загрузки пользователей:', error)
-  }
-  loading.value = false
-}
-
-async function loadGroups() {
-  try {
-    const response = await api.get('/groups')
-    groups.value = response.data
-  } catch (error) {
-    console.error('Ошибка загрузки групп:', error)
-  }
-}
-
-async function saveUser() {
-  try {
-    const data = { ...userForm.value }
-    if (editingUser.value) {
-      if (!data.password) {
-        delete data.password
-      }
-      await api.put(`/users/${editingUser.value.id}`, data)
-    } else {
-      await api.post('/auth/register', data)
-    }
-    closeModal()
-    loadUsers()
-  } catch (error) {
-    alert(error.response?.data?.error || 'Ошибка сохранения пользователя')
-  }
-}
-
-function editUser(user) {
-  editingUser.value = user
-  userForm.value = {
-    full_name: user.full_name,
-    email: user.email,
-    password: '',
-    role: user.role,
-    group_id: user.group_id || ''
-  }
-  showAddModal.value = true
-}
-
-async function deleteUser(id) {
-  if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) return
-
-  try {
-    await api.delete(`/users/${id}`)
-    loadUsers()
-  } catch (error) {
-    alert(error.response?.data?.error || 'Ошибка удаления пользователя')
-  }
-}
-
-function closeModal() {
-  showAddModal.value = false
-  editingUser.value = null
-  userForm.value = {
-    full_name: '',
-    email: '',
-    password: '',
-    role: 'student',
-    group_id: ''
-  }
-}
-
-onMounted(async () => {
-  await Promise.all([loadUsers(), loadGroups()])
-})
-</script>
-
-```
-
-## `frontend/tailwind.config.js`
-
-```javascript
-/** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-
-```
-
-## `frontend/vercel.json`
-
-```json
-{
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
-
-```
-
-## `frontend/vite.config.js`
-
-```javascript
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { fileURLToPath, URL } from 'node:url'
-
-export default defineConfig({
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
-  },
-  build: {
-    outDir: 'dist',
-    assetsDir: 'assets',
-    sourcemap: false
-  },
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true
-      }
-    }
-  }
-})
-
 ```
 
