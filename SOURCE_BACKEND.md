@@ -1286,7 +1286,7 @@ async function seed() {
         for (let i = 0; i < numGrades; i++) {
           const grade = Math.floor(Math.random() * 3) + 3; // Оценки от 3 до 5
           const workType = workTypes[Math.floor(Math.random() * workTypes.length)];
-          const date = new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
+          const date = new Date(2026, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1)
             .toISOString().split('T')[0];
 
           try {
