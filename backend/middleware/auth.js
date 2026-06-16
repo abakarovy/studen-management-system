@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../config/env.js';
 
 /**
  * Middleware для проверки JWT токена
@@ -11,7 +12,7 @@ export function authenticateToken(req, res, next) {
     return res.status(401).json({ error: 'Токен доступа отсутствует' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  jwt.verify(token, getJwtSecret(), (err, user) => {
     if (err) {
       return res.status(403).json({ error: 'Недействительный токен' });
     }

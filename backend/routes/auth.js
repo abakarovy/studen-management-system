@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getDatabase } from '../config/database.js';
 import { authenticateToken, checkRole } from '../middleware/auth.js';
+import { getJwtSecret } from '../config/env.js';
 
 const router = express.Router();
 const db = getDatabase();
@@ -32,7 +33,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -45,6 +46,9 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Ошибка при входе:', error);
+    if (error.message?.includes('JWT_SECRET')) {
+      return res.status(503).json({ error: 'Сервер не настроен: отсутствует JWT_SECRET' });
+    }
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

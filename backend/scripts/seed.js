@@ -1,15 +1,17 @@
 import bcrypt from 'bcryptjs';
-import { initDatabase, getDatabase } from '../config/database.js';
+import { fileURLToPath } from 'url';
+import { resolve } from 'path';
+import { initDatabase } from '../config/database.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 /**
- * Скрипт для заполнения базы данных тестовыми данными
+ * Заполнение базы данных тестовыми данными
  */
-async function seed() {
+export async function runSeed({ closeAfter = false } = {}) {
   console.log('Начало заполнения базы данных...');
-  
+
   const db = initDatabase();
 
   try {
@@ -166,11 +168,20 @@ async function seed() {
 
   } catch (error) {
     console.error('Ошибка при заполнении базы данных:', error);
-    process.exit(1);
+    throw error;
   } finally {
-    db.close();
+    if (closeAfter && typeof db.close === 'function') {
+      db.close();
+    }
   }
 }
 
-seed();
+const isCli = process.argv[1]
+  && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
+
+if (isCli) {
+  runSeed({ closeAfter: true }).catch(() => {
+    process.exit(1);
+  });
+}
 

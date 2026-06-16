@@ -1,4 +1,3 @@
-import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
@@ -8,18 +7,19 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const dbPath = process.env.DB_PATH || join(__dirname, '../database.sqlite');
+const dbPath = process.env.DB_PATH || (process.env.VERCEL ? '/tmp/database.sqlite' : join(__dirname, '../database.sqlite'));
 let db = null;
 
+const { createAdapter } = process.env.VERCEL
+  ? await import('./database-sqljs.js').then((mod) => ({ createAdapter: mod.createSqlJsAdapter }))
+  : await import('./database-better.js').then((mod) => ({ createAdapter: mod.createBetterSqliteAdapter }));
+
 function openDatabase() {
-  const instance = new Database(dbPath);
+  const instance = createAdapter(dbPath);
   instance.pragma('foreign_keys = ON');
   return instance;
 }
 
-/**
- * Инициализация базы данных и создание таблиц
- */
 export function initDatabase() {
   db = openDatabase();
   createTables();
@@ -27,9 +27,6 @@ export function initDatabase() {
   return db;
 }
 
-/**
- * Получить экземпляр базы данных
- */
 export function getDatabase() {
   if (!db) {
     db = openDatabase();
@@ -38,9 +35,6 @@ export function getDatabase() {
   return db;
 }
 
-/**
- * Создание всех необходимых таблиц
- */
 function createTables() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
