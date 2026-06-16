@@ -3,11 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { initDatabase, getDatabase } from './config/database.js';
 import { assertRequiredEnv } from './config/env.js';
-import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
-import gradeRoutes from './routes/grades.js';
-import groupRoutes from './routes/groups.js';
-import subjectRoutes from './routes/subjects.js';
 
 dotenv.config();
 
@@ -23,10 +18,18 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const db = initDatabase();
+initDatabase();
+
+const seedReady = checkAndSeed();
+
+app.use(async (req, res, next) => {
+  await seedReady;
+  next();
+});
 
 async function checkAndSeed() {
   try {
+    const db = getDatabase();
     const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
 
     if (userCount.count === 0) {
@@ -42,9 +45,19 @@ async function checkAndSeed() {
   }
 }
 
-checkAndSeed().catch((err) => {
-  console.error('Ошибка seed:', err);
-});
+const [
+  { default: authRoutes },
+  { default: userRoutes },
+  { default: gradeRoutes },
+  { default: groupRoutes },
+  { default: subjectRoutes },
+] = await Promise.all([
+  import('./routes/auth.js'),
+  import('./routes/users.js'),
+  import('./routes/grades.js'),
+  import('./routes/groups.js'),
+  import('./routes/subjects.js'),
+]);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

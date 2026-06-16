@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
 import { resolve } from 'path';
-import { initDatabase } from '../config/database.js';
+import { getDatabase } from '../config/database.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -12,7 +12,7 @@ dotenv.config();
 export async function runSeed({ closeAfter = false } = {}) {
   console.log('Начало заполнения базы данных...');
 
-  const db = initDatabase();
+  const db = getDatabase();
 
   try {
     // Очистка существующих данных (опционально, закомментируйте если нужно сохранить данные)

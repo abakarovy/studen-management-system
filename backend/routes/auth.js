@@ -6,7 +6,6 @@ import { authenticateToken, checkRole } from '../middleware/auth.js';
 import { getJwtSecret } from '../config/env.js';
 
 const router = express.Router();
-const db = getDatabase();
 
 /**
  * POST /api/auth/login
@@ -20,7 +19,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email и пароль обязательны' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const user = getDatabase().prepare('SELECT * FROM users WHERE email = ?').get(email);
 
     if (!user) {
       return res.status(401).json({ error: 'Неверный email или пароль' });
@@ -70,7 +69,7 @@ router.post('/register', authenticateToken, checkRole(['curator']), async (req, 
     }
 
     // Проверка существующего пользователя
-    const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existingUser = getDatabase().prepare('SELECT id FROM users WHERE email = ?').get(email);
     if (existingUser) {
       return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
     }
@@ -79,12 +78,12 @@ router.post('/register', authenticateToken, checkRole(['curator']), async (req, 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Вставка пользователя
-    const result = db.prepare(`
+    const result = getDatabase().prepare(`
       INSERT INTO users (email, password, full_name, role, group_id)
       VALUES (?, ?, ?, ?, ?)
     `).run(email, hashedPassword, full_name, role, group_id || null);
 
-    const newUser = db.prepare('SELECT id, email, full_name, role, group_id, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
+    const newUser = getDatabase().prepare('SELECT id, email, full_name, role, group_id, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
 
     res.status(201).json({ message: 'Пользователь создан', user: newUser });
   } catch (error) {
@@ -99,7 +98,7 @@ router.post('/register', authenticateToken, checkRole(['curator']), async (req, 
  */
 router.get('/me', authenticateToken, (req, res) => {
   try {
-    const user = db.prepare(`
+    const user = getDatabase().prepare(`
       SELECT u.id, u.email, u.full_name, u.role, u.group_id, u.created_at, g.name as group_name
       FROM users u
       LEFT JOIN groups g ON u.group_id = g.id

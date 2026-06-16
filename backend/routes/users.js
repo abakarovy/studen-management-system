@@ -4,7 +4,6 @@ import { getDatabase } from '../config/database.js';
 import { authenticateToken, checkRole } from '../middleware/auth.js';
 
 const router = express.Router();
-const db = getDatabase();
 
 /**
  * GET /api/users
@@ -12,7 +11,7 @@ const db = getDatabase();
  */
 router.get('/', authenticateToken, checkRole(['curator']), (req, res) => {
   try {
-    const users = db.prepare(`
+    const users = getDatabase().prepare(`
       SELECT u.id, u.email, u.full_name, u.role, u.group_id, u.created_at, g.name as group_name
       FROM users u
       LEFT JOIN groups g ON u.group_id = g.id
@@ -40,7 +39,7 @@ router.get('/:id', authenticateToken, (req, res) => {
       return res.status(403).json({ error: 'Недостаточно прав доступа' });
     }
 
-    const user = db.prepare(`
+    const user = getDatabase().prepare(`
       SELECT u.id, u.email, u.full_name, u.role, u.group_id, u.created_at, g.name as group_name
       FROM users u
       LEFT JOIN groups g ON u.group_id = g.id
@@ -79,8 +78,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
       }
 
       if (full_name) {
-        db.prepare('UPDATE users SET full_name = ? WHERE id = ?').run(full_name, userId);
-        const updatedUser = db.prepare(`
+        getDatabase().prepare('UPDATE users SET full_name = ? WHERE id = ?').run(full_name, userId);
+        const updatedUser = getDatabase().prepare(`
           SELECT u.id, u.email, u.full_name, u.role, u.group_id, u.created_at, g.name as group_name
           FROM users u
           LEFT JOIN groups g ON u.group_id = g.id
@@ -122,9 +121,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     updateValues.push(userId);
     const sql = `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`;
-    db.prepare(sql).run(...updateValues);
+    getDatabase().prepare(sql).run(...updateValues);
 
-    const updatedUser = db.prepare(`
+    const updatedUser = getDatabase().prepare(`
       SELECT u.id, u.email, u.full_name, u.role, u.group_id, u.created_at, g.name as group_name
       FROM users u
       LEFT JOIN groups g ON u.group_id = g.id
@@ -150,7 +149,7 @@ router.delete('/:id', authenticateToken, checkRole(['curator']), (req, res) => {
       return res.status(400).json({ error: 'Нельзя удалить самого себя' });
     }
 
-    const result = db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    const result = getDatabase().prepare('DELETE FROM users WHERE id = ?').run(userId);
 
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Пользователь не найден' });

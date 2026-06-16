@@ -3,7 +3,6 @@ import { getDatabase } from '../config/database.js';
 import { authenticateToken, checkRole } from '../middleware/auth.js';
 
 const router = express.Router();
-const db = getDatabase();
 
 /**
  * GET /api/grades
@@ -20,7 +19,7 @@ router.get('/', authenticateToken, (req, res) => {
 
     if (currentUser.role === 'student') {
       // Студент видит только свои оценки
-      grades = db.prepare(`
+      grades = getDatabase().prepare(`
         SELECT g.*, s.name as subject_name, u.full_name as student_name, sub.teacher_id
         FROM grades g
         JOIN subjects s ON g.subject_id = s.id
@@ -32,7 +31,7 @@ router.get('/', authenticateToken, (req, res) => {
     } else if (currentUser.role === 'teacher') {
       // Преподаватель видит оценки по своим дисциплинам
       if (group_id) {
-        grades = db.prepare(`
+        grades = getDatabase().prepare(`
           SELECT g.*, s.name as subject_name, u.full_name as student_name, sub.teacher_id
           FROM grades g
           JOIN subjects s ON g.subject_id = s.id
@@ -42,7 +41,7 @@ router.get('/', authenticateToken, (req, res) => {
           ORDER BY g.date DESC, g.created_at DESC
         `).all(currentUser.id, group_id);
       } else {
-        grades = db.prepare(`
+        grades = getDatabase().prepare(`
           SELECT g.*, s.name as subject_name, u.full_name as student_name, sub.teacher_id
           FROM grades g
           JOIN subjects s ON g.subject_id = s.id
@@ -78,7 +77,7 @@ router.get('/', authenticateToken, (req, res) => {
       }
 
       query += ' ORDER BY g.date DESC, g.created_at DESC';
-      grades = db.prepare(query).all(...params);
+      grades = getDatabase().prepare(query).all(...params);
     }
 
     res.json(grades);
@@ -106,13 +105,13 @@ router.post('/', authenticateToken, checkRole(['teacher', 'curator']), (req, res
     }
 
     // Проверка, что студент существует
-    const student = db.prepare('SELECT id, group_id FROM users WHERE id = ? AND role = ?').get(student_id, 'student');
+    const student = getDatabase().prepare('SELECT id, group_id FROM users WHERE id = ? AND role = ?').get(student_id, 'student');
     if (!student) {
       return res.status(404).json({ error: 'Студент не найден' });
     }
 
     // Проверка, что дисциплина существует
-    const subject = db.prepare('SELECT id, teacher_id FROM subjects WHERE id = ?').get(subject_id);
+    const subject = getDatabase().prepare('SELECT id, teacher_id FROM subjects WHERE id = ?').get(subject_id);
     if (!subject) {
       return res.status(404).json({ error: 'Дисциплина не найдена' });
     }
@@ -122,12 +121,12 @@ router.post('/', authenticateToken, checkRole(['teacher', 'curator']), (req, res
       return res.status(403).json({ error: 'Вы не можете добавлять оценки по этой дисциплине' });
     }
 
-    const result = db.prepare(`
+    const result = getDatabase().prepare(`
       INSERT INTO grades (student_id, subject_id, grade, work_type, date)
       VALUES (?, ?, ?, ?, ?)
     `).run(student_id, subject_id, grade, work_type, date);
 
-    const newGrade = db.prepare(`
+    const newGrade = getDatabase().prepare(`
       SELECT g.*, s.name as subject_name, u.full_name as student_name
       FROM grades g
       JOIN subjects s ON g.subject_id = s.id
@@ -153,7 +152,7 @@ router.put('/:id', authenticateToken, checkRole(['teacher', 'curator']), (req, r
     const currentUser = req.user;
 
     // Получаем текущую оценку
-    const currentGrade = db.prepare(`
+    const currentGrade = getDatabase().prepare(`
       SELECT g.*, s.teacher_id
       FROM grades g
       JOIN subjects s ON g.subject_id = s.id
@@ -194,9 +193,9 @@ router.put('/:id', authenticateToken, checkRole(['teacher', 'curator']), (req, r
 
     updateValues.push(gradeId);
     const sql = `UPDATE grades SET ${updateFields.join(', ')} WHERE id = ?`;
-    db.prepare(sql).run(...updateValues);
+    getDatabase().prepare(sql).run(...updateValues);
 
-    const updatedGrade = db.prepare(`
+    const updatedGrade = getDatabase().prepare(`
       SELECT g.*, s.name as subject_name, u.full_name as student_name
       FROM grades g
       JOIN subjects s ON g.subject_id = s.id
@@ -221,7 +220,7 @@ router.delete('/:id', authenticateToken, checkRole(['teacher', 'curator']), (req
     const currentUser = req.user;
 
     // Получаем текущую оценку
-    const currentGrade = db.prepare(`
+    const currentGrade = getDatabase().prepare(`
       SELECT g.*, s.teacher_id
       FROM grades g
       JOIN subjects s ON g.subject_id = s.id
@@ -237,7 +236,7 @@ router.delete('/:id', authenticateToken, checkRole(['teacher', 'curator']), (req
       return res.status(403).json({ error: 'Недостаточно прав доступа' });
     }
 
-    db.prepare('DELETE FROM grades WHERE id = ?').run(gradeId);
+    getDatabase().prepare('DELETE FROM grades WHERE id = ?').run(gradeId);
 
     res.json({ message: 'Оценка удалена' });
   } catch (error) {

@@ -3,7 +3,6 @@ import { getDatabase } from '../config/database.js';
 import { authenticateToken, checkRole } from '../middleware/auth.js';
 
 const router = express.Router();
-const db = getDatabase();
 
 /**
  * GET /api/groups
@@ -18,7 +17,7 @@ router.get('/', authenticateToken, (req, res) => {
 
     if (currentUser.role === 'teacher') {
       // Преподаватель видит только группы, где есть его дисциплины
-      groups = db.prepare(`
+      groups = getDatabase().prepare(`
         SELECT DISTINCT g.id, g.name, g.created_at,
                COUNT(DISTINCT u.id) as student_count
         FROM groups g
@@ -30,7 +29,7 @@ router.get('/', authenticateToken, (req, res) => {
       `).all(currentUser.id);
     } else if (currentUser.role === 'curator') {
       // Куратор видит все группы
-      groups = db.prepare(`
+      groups = getDatabase().prepare(`
         SELECT g.id, g.name, g.created_at,
                COUNT(DISTINCT u.id) as student_count
         FROM groups g
@@ -40,9 +39,9 @@ router.get('/', authenticateToken, (req, res) => {
       `).all();
     } else {
       // Студент видит только свою группу
-      const user = db.prepare('SELECT group_id FROM users WHERE id = ?').get(currentUser.id);
+      const user = getDatabase().prepare('SELECT group_id FROM users WHERE id = ?').get(currentUser.id);
       if (user && user.group_id) {
-        groups = db.prepare(`
+        groups = getDatabase().prepare(`
           SELECT g.id, g.name, g.created_at,
                  COUNT(DISTINCT u.id) as student_count
           FROM groups g
@@ -73,18 +72,18 @@ router.get('/:id', authenticateToken, (req, res) => {
 
     // Проверка доступа для студентов
     if (currentUser.role === 'student') {
-      const user = db.prepare('SELECT group_id FROM users WHERE id = ?').get(currentUser.id);
+      const user = getDatabase().prepare('SELECT group_id FROM users WHERE id = ?').get(currentUser.id);
       if (!user || user.group_id !== groupId) {
         return res.status(403).json({ error: 'Недостаточно прав доступа' });
       }
     }
 
-    const group = db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
+    const group = getDatabase().prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
     if (!group) {
       return res.status(404).json({ error: 'Группа не найдена' });
     }
 
-    const students = db.prepare(`
+    const students = getDatabase().prepare(`
       SELECT id, email, full_name, role, group_id, created_at
       FROM users
       WHERE group_id = ? AND role = 'student'
@@ -111,13 +110,13 @@ router.post('/', authenticateToken, checkRole(['curator']), (req, res) => {
     }
 
     // Проверка на существующую группу
-    const existing = db.prepare('SELECT id FROM groups WHERE name = ?').get(name);
+    const existing = getDatabase().prepare('SELECT id FROM groups WHERE name = ?').get(name);
     if (existing) {
       return res.status(400).json({ error: 'Группа с таким названием уже существует' });
     }
 
-    const result = db.prepare('INSERT INTO groups (name) VALUES (?)').run(name);
-    const newGroup = db.prepare('SELECT * FROM groups WHERE id = ?').get(result.lastInsertRowid);
+    const result = getDatabase().prepare('INSERT INTO groups (name) VALUES (?)').run(name);
+    const newGroup = getDatabase().prepare('SELECT * FROM groups WHERE id = ?').get(result.lastInsertRowid);
 
     res.status(201).json({ message: 'Группа создана', group: newGroup });
   } catch (error) {
@@ -139,19 +138,19 @@ router.put('/:id', authenticateToken, checkRole(['curator']), (req, res) => {
       return res.status(400).json({ error: 'Название группы обязательно' });
     }
 
-    const group = db.prepare('SELECT id FROM groups WHERE id = ?').get(groupId);
+    const group = getDatabase().prepare('SELECT id FROM groups WHERE id = ?').get(groupId);
     if (!group) {
       return res.status(404).json({ error: 'Группа не найдена' });
     }
 
     // Проверка на существующую группу с таким же именем
-    const existing = db.prepare('SELECT id FROM groups WHERE name = ? AND id != ?').get(name, groupId);
+    const existing = getDatabase().prepare('SELECT id FROM groups WHERE name = ? AND id != ?').get(name, groupId);
     if (existing) {
       return res.status(400).json({ error: 'Группа с таким названием уже существует' });
     }
 
-    db.prepare('UPDATE groups SET name = ? WHERE id = ?').run(name, groupId);
-    const updatedGroup = db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
+    getDatabase().prepare('UPDATE groups SET name = ? WHERE id = ?').run(name, groupId);
+    const updatedGroup = getDatabase().prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
 
     res.json({ message: 'Группа обновлена', group: updatedGroup });
   } catch (error) {
@@ -168,18 +167,18 @@ router.delete('/:id', authenticateToken, checkRole(['curator']), (req, res) => {
   try {
     const groupId = parseInt(req.params.id);
 
-    const group = db.prepare('SELECT id FROM groups WHERE id = ?').get(groupId);
+    const group = getDatabase().prepare('SELECT id FROM groups WHERE id = ?').get(groupId);
     if (!group) {
       return res.status(404).json({ error: 'Группа не найдена' });
     }
 
     // Проверка на наличие студентов в группе
-    const studentsCount = db.prepare('SELECT COUNT(*) as count FROM users WHERE group_id = ?').get(groupId);
+    const studentsCount = getDatabase().prepare('SELECT COUNT(*) as count FROM users WHERE group_id = ?').get(groupId);
     if (studentsCount.count > 0) {
       return res.status(400).json({ error: 'Нельзя удалить группу, в которой есть студенты' });
     }
 
-    db.prepare('DELETE FROM groups WHERE id = ?').run(groupId);
+    getDatabase().prepare('DELETE FROM groups WHERE id = ?').run(groupId);
 
     res.json({ message: 'Группа удалена' });
   } catch (error) {

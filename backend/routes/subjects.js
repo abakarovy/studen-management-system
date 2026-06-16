@@ -3,7 +3,6 @@ import { getDatabase } from '../config/database.js';
 import { authenticateToken, checkRole } from '../middleware/auth.js';
 
 const router = express.Router();
-const db = getDatabase();
 
 /**
  * GET /api/subjects
@@ -18,7 +17,7 @@ router.get('/', authenticateToken, (req, res) => {
     let subjects;
 
     if (currentUser.role === 'teacher') {
-      subjects = db.prepare(`
+      subjects = getDatabase().prepare(`
         SELECT s.*, u.full_name as teacher_name
         FROM subjects s
         JOIN users u ON s.teacher_id = u.id
@@ -26,7 +25,7 @@ router.get('/', authenticateToken, (req, res) => {
         ORDER BY s.name
       `).all(currentUser.id);
     } else {
-      subjects = db.prepare(`
+      subjects = getDatabase().prepare(`
         SELECT s.*, u.full_name as teacher_name
         FROM subjects s
         JOIN users u ON s.teacher_id = u.id
@@ -49,7 +48,7 @@ router.get('/:id', authenticateToken, (req, res) => {
   try {
     const subjectId = parseInt(req.params.id);
 
-    const subject = db.prepare(`
+    const subject = getDatabase().prepare(`
       SELECT s.*, u.full_name as teacher_name
       FROM subjects s
       JOIN users u ON s.teacher_id = u.id
@@ -80,7 +79,7 @@ router.post('/', authenticateToken, checkRole(['curator']), (req, res) => {
     }
 
     // Проверка, что преподаватель существует и имеет роль teacher
-    const teacher = db.prepare('SELECT id, role FROM users WHERE id = ?').get(teacher_id);
+    const teacher = getDatabase().prepare('SELECT id, role FROM users WHERE id = ?').get(teacher_id);
     if (!teacher) {
       return res.status(404).json({ error: 'Преподаватель не найден' });
     }
@@ -88,8 +87,8 @@ router.post('/', authenticateToken, checkRole(['curator']), (req, res) => {
       return res.status(400).json({ error: 'Пользователь не является преподавателем' });
     }
 
-    const result = db.prepare('INSERT INTO subjects (name, teacher_id) VALUES (?, ?)').run(name, teacher_id);
-    const newSubject = db.prepare(`
+    const result = getDatabase().prepare('INSERT INTO subjects (name, teacher_id) VALUES (?, ?)').run(name, teacher_id);
+    const newSubject = getDatabase().prepare(`
       SELECT s.*, u.full_name as teacher_name
       FROM subjects s
       JOIN users u ON s.teacher_id = u.id
@@ -112,7 +111,7 @@ router.put('/:id', authenticateToken, checkRole(['curator']), (req, res) => {
     const subjectId = parseInt(req.params.id);
     const { name, teacher_id } = req.body;
 
-    const subject = db.prepare('SELECT id FROM subjects WHERE id = ?').get(subjectId);
+    const subject = getDatabase().prepare('SELECT id FROM subjects WHERE id = ?').get(subjectId);
     if (!subject) {
       return res.status(404).json({ error: 'Дисциплина не найдена' });
     }
@@ -126,7 +125,7 @@ router.put('/:id', authenticateToken, checkRole(['curator']), (req, res) => {
     }
     if (teacher_id) {
       // Проверка, что преподаватель существует и имеет роль teacher
-      const teacher = db.prepare('SELECT id, role FROM users WHERE id = ?').get(teacher_id);
+      const teacher = getDatabase().prepare('SELECT id, role FROM users WHERE id = ?').get(teacher_id);
       if (!teacher) {
         return res.status(404).json({ error: 'Преподаватель не найден' });
       }
@@ -143,9 +142,9 @@ router.put('/:id', authenticateToken, checkRole(['curator']), (req, res) => {
 
     updateValues.push(subjectId);
     const sql = `UPDATE subjects SET ${updateFields.join(', ')} WHERE id = ?`;
-    db.prepare(sql).run(...updateValues);
+    getDatabase().prepare(sql).run(...updateValues);
 
-    const updatedSubject = db.prepare(`
+    const updatedSubject = getDatabase().prepare(`
       SELECT s.*, u.full_name as teacher_name
       FROM subjects s
       JOIN users u ON s.teacher_id = u.id
@@ -167,18 +166,18 @@ router.delete('/:id', authenticateToken, checkRole(['curator']), (req, res) => {
   try {
     const subjectId = parseInt(req.params.id);
 
-    const subject = db.prepare('SELECT id FROM subjects WHERE id = ?').get(subjectId);
+    const subject = getDatabase().prepare('SELECT id FROM subjects WHERE id = ?').get(subjectId);
     if (!subject) {
       return res.status(404).json({ error: 'Дисциплина не найдена' });
     }
 
     // Проверка на наличие оценок по дисциплине
-    const gradesCount = db.prepare('SELECT COUNT(*) as count FROM grades WHERE subject_id = ?').get(subjectId);
+    const gradesCount = getDatabase().prepare('SELECT COUNT(*) as count FROM grades WHERE subject_id = ?').get(subjectId);
     if (gradesCount.count > 0) {
       return res.status(400).json({ error: 'Нельзя удалить дисциплину, по которой есть оценки' });
     }
 
-    db.prepare('DELETE FROM subjects WHERE id = ?').run(subjectId);
+    getDatabase().prepare('DELETE FROM subjects WHERE id = ?').run(subjectId);
 
     res.json({ message: 'Дисциплина удалена' });
   } catch (error) {

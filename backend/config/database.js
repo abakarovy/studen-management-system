@@ -21,6 +21,10 @@ function openDatabase() {
 }
 
 export function initDatabase() {
+  if (db) {
+    return db;
+  }
+
   db = openDatabase();
   createTables();
   console.log('База данных инициализирована:', dbPath);
